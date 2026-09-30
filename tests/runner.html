@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>gematrAI Tests</title>
+  <style>
+    body { font-family: monospace; background: #0a0c0f; color: #e6edf5; padding: 2rem; }
+    h1 { color: #c9a227; }
+    pre { background: #11151b; padding: 1rem; border-radius: 6px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>gematrAI · Test Runner</h1>
+  <p>Open the browser console for detailed output. Summary below.</p>
+  <pre id="out">Running…</pre>
+  <script type="module">
+    import { passed, failed } from './test-gematria.js';
+    const out = document.getElementById('out');
+    out.textContent = `Passed: ${passed}\nFailed: ${failed}\n\n${failed === 0 ? 'ALL TESTS PASSED' : 'SOME TESTS FAILED — see console'}`;
+    out.style.color = failed === 0 ? '#9ec99e' : '#c45c5c';
+  </script>
+</body>
+</html>
