@@ -38,25 +38,31 @@
           </div>
         </div>
 
+        <div id="explore-history" class="explore-history" style="display:none" aria-label="Exploration path"></div>
+
         <div class="panel-title" style="margin-top:1.25rem">Results</div>
         <div id="results" class="results-list">
           <div class="empty-state">Enter Latin, Hebrew, or Greek text</div>
         </div>
       </section>
 
+      <section class="panel" id="equivalence-panel" style="display:none;margin-top:1rem">
+        <div class="panel-title">Equivalence Explorer · same-value words</div>
+        <p class="equiv-intro">
+          Other corpus terms sharing the same numerical value under each calculation system.
+          Click a term to load it into the calculator and continue exploring.
+        </p>
+        <div id="equiv-list" class="equiv-list"></div>
+      </section>
+
       <section class="panel" id="corpus-matches-panel" style="display:none;margin-top:1rem">
-        <div class="panel-title">Corpus Matches · Sefaria tower</div>
+        <div class="panel-title">Corpus detail · selected system</div>
         <p class="corpus-matches-summary" id="corpus-matches-summary"></p>
         <div id="corpus-matches-list" class="match-list"></div>
         <p class="corpus-disclaimer">
-          Numerical matches are computed by gematrAI over the indexed corpus.
-          They are not Sefaria annotations and do not establish semantic or historical relationships.
+          Unique terms first; occurrence counts and refs are secondary.
+          Numerical matches are computed by gematrAI — not Sefaria annotations.
         </p>
-      </section>
-
-      <section class="panel" id="equivalence-panel" style="display:none;margin-top:1rem">
-        <div class="panel-title">Equivalence (seed corpus)</div>
-        <div id="equiv-list" class="equiv-list"></div>
       </section>
     </div>
 
@@ -88,9 +94,9 @@
       </section>
 
       <section class="panel side-panel">
-        <div class="panel-title">Reverse Lookup</div>
+        <div class="panel-title">Reverse Lookup · by value</div>
         <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.6rem">
-          Search seed corpus + tower indexes by value.
+          Secondary: search the same corpus index by numerical value (e.g. 42).
         </p>
         <div class="reverse-form">
           <input type="number" id="reverse-value" placeholder="Value" min="0" step="1" />
