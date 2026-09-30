@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="gematrAI — client-side gematria explorer for Hebrew, Greek, and English. Pure static, no backend." />
+  <title>gematrAI — Gematria Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+Hebrew:wght@400;600&family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">gematr<span>AI</span></div>
+      <div class="tagline">because assigning numbers to letters wasn’t computational enough</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="main-col">
+      <!-- Calculator -->
+      <section class="panel">
+        <div class="panel-title">Input</div>
+        <div class="input-wrap">
+          <textarea
+            id="query-input"
+            rows="2"
+            placeholder="Type Latin, Hebrew, or Greek… e.g. אהבה · λόγος · light"
+            spellcheck="false"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+          ></textarea>
+          <div class="input-meta">
+            <span id="char-count">0 chars</span>
+            <span id="script-hint">—</span>
+          </div>
+        </div>
+
+        <div class="panel-title" style="margin-top:1.25rem">Results</div>
+        <div id="results" class="results-list">
+          <div class="empty-state">Enter Latin, Hebrew, or Greek text</div>
+        </div>
+      </section>
+
+      <!-- Equivalence -->
+      <section class="panel" id="equivalence-panel" style="display:none;margin-top:1rem">
+        <div class="panel-title">Equivalence Explorer · local corpus</div>
+        <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:0.4rem">
+          Other included-corpus terms sharing the same numerical value under the selected system.
+          Click to load into the calculator.
+        </p>
+        <div id="equiv-list" class="equiv-list"></div>
+      </section>
+    </div>
+
+    <aside class="side-col">
+      <!-- AI Interpretation -->
+      <section class="panel side-panel ai-panel">
+        <div class="panel-title">AI Interpretation</div>
+        <div id="ai-content" class="ai-content">
+          <p class="empty-state" style="padding:0">Awaiting input…</p>
+        </div>
+      </section>
+
+      <!-- Reverse lookup -->
+      <section class="panel side-panel">
+        <div class="panel-title">Reverse Lookup · local corpus</div>
+        <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:0.6rem">
+          Search the included corpus (<span id="corpus-size">0</span> entries) by numerical value.
+          Not a comprehensive lexicon.
+        </p>
+        <div class="reverse-form">
+          <input type="number" id="reverse-value" placeholder="Value" min="0" step="1" />
+          <select id="reverse-system"></select>
+          <button type="button" id="reverse-btn">Search</button>
+        </div>
+        <div id="match-list" class="match-list"></div>
+      </section>
+
+      <!-- Systems legend -->
+      <section class="panel side-panel">
+        <div class="panel-title">Supported Systems</div>
+        <ul style="list-style:none;font-size:0.8rem;color:var(--text-muted);line-height:1.7;font-family:var(--mono)">
+          <li>Hechrechi · Standard Hebrew</li>
+          <li>Gadol · Finals elevated</li>
+          <li>Katan · Letter reduction</li>
+          <li>Ordinal · A=1…Z=26</li>
+          <li>Reduction / Pythagorean</li>
+          <li>Isopsephy · Classical Greek</li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      gematrAI · pure client-side ·
+      <a href="https://github.com/TheBabelDragon/gematrAI">source</a> ·
+      numerical equivalence ≠ semantic relationship
+    </p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
