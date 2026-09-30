@@ -1,35 +1,18 @@
 {
-  "tower": "0.1",
+  "provider": "sefaria",
+  "version": 1,
+  "tower": "0.2",
   "name": "gematrAI Corpus Tower",
-  "description": "Sefaria-backed Hebrew Tanakh corpus for gematria indexing",
-  "primary_source": "sefaria",
-  "language": "he",
-  "systems": ["hebrew-standard", "hebrew-gadol", "hebrew-katan"],
-  "categories": {
-    "torah": {
-      "label": "Torah",
-      "sefaria_category": "Tanakh",
-      "titles": ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy"]
-    },
-    "prophets": {
-      "label": "Prophets (Nevi'im)",
-      "sefaria_category": "Tanakh",
-      "titles": ["Joshua", "Judges", "I Samuel", "II Samuel", "I Kings", "II Kings", "Isaiah", "Jeremiah", "Ezekiel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi"]
-    },
-    "writings": {
-      "label": "Writings (Ketuvim)",
-      "sefaria_category": "Tanakh",
-      "titles": ["Psalms", "Proverbs", "Job", "Song of Songs", "Ruth", "Lamentations", "Ecclesiastes", "Esther", "Daniel", "Ezra", "Nehemiah", "I Chronicles", "II Chronicles"]
-    }
-  },
-  "default_scope": ["torah"],
-  "full_scope": ["torah", "prophets", "writings"],
-  "sefaria": {
-    "api_base": "https://www.sefaria.org/api",
-    "version_param": "hebrew",
-    "return_format": "text_only",
-    "docs": "https://developers.sefaria.org/reference/get-v3-texts",
-    "export": "https://github.com/Sefaria/Sefaria-Export"
-  },
-  "notes": "Users cannot edit the corpus via the website. Expansion is build-time only."
+  "catalog_url": "https://raw.githubusercontent.com/Sefaria/Sefaria-Export/master/books.json",
+  "preferred_hebrew_version": "Tanach with Text Only",
+  "fallback_hebrew_version": "merged",
+  "collections": [
+    {"id": "tanakh-torah", "category_path": ["Tanakh", "Torah"], "language": "Hebrew", "enabled": true, "titles": ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy"]},
+    {"id": "tanakh-prophets", "category_path": ["Tanakh", "Prophets"], "language": "Hebrew", "enabled": true, "titles": ["Joshua", "Judges", "I Samuel", "II Samuel", "I Kings", "II Kings", "Isaiah", "Jeremiah", "Ezekiel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi"]},
+    {"id": "tanakh-writings", "category_path": ["Tanakh", "Writings"], "language": "Hebrew", "enabled": true, "titles": ["Psalms", "Proverbs", "Job", "Song of Songs", "Ruth", "Lamentations", "Ecclesiastes", "Esther", "Daniel", "Ezra", "Nehemiah", "I Chronicles", "II Chronicles"]},
+    {"id": "mishnah", "category_path": ["Mishnah"], "language": "Hebrew", "enabled": false},
+    {"id": "talmud", "category_path": ["Talmud"], "language": "Hebrew", "enabled": false}
+  ],
+  "phrases": {"enabled": true, "max_n": 2},
+  "sharding": {"value_bucket_size": 100}
 }
