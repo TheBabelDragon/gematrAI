@@ -1,0 +1,7 @@
+[
+  {"ref": "Genesis 1:1", "book": "Genesis", "language": "he", "text_original": "בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃", "license": "Public Domain", "sourceUrl": "https://www.sefaria.org/Genesis.1.1"},
+  {"ref": "Genesis 1:2", "book": "Genesis", "language": "he", "text_original": "וְהָאָ֗רֶץ הָיְתָ֥ה תֹ֙הוּ֙ וָבֹ֔הוּ", "license": "Public Domain", "sourceUrl": "https://www.sefaria.org/Genesis.1.2"},
+  {"ref": "Genesis 1:1-repeat", "book": "Genesis", "language": "he", "text_original": "בראשית ברא אלהים", "license": "Public Domain", "sourceUrl": "https://www.sefaria.org/Genesis.1.1"},
+  {"ref": "Test EN 1", "book": "Fixture", "language": "en", "text_original": "love light", "license": "Public Domain", "sourceUrl": ""},
+  {"ref": "Test EL 1", "book": "Fixture", "language": "el", "text_original": "λόγος", "license": "Public Domain", "sourceUrl": ""}
+]

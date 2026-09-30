@@ -18,18 +18,18 @@ Progressively expanding, **non-user-editable** textual/gematria corpus for gemat
 ## Source
 
 Initial provider: **[Sefaria](https://www.sefaria.org)**  
-- API: https://developers.sefaria.org/reference/get-v3-texts  
-- Export (not vendored here): https://github.com/Sefaria/Sefaria-Export  
+- Export: https://github.com/Sefaria/Sefaria-Export  
+- Preferred version: *Tanach with Text Only* (Public Domain)
 
-## Scope (tower 0.1)
+## Scope (tower 0.2)
 
-Tanakh Hebrew primary versions — initial production build: **Torah**. Prophets and Writings are declared in `manifest.json` for `--scope tanakh`.
+Full **Tanakh** Hebrew (Torah + Prophets + Writings) — 39 books.
 
 ## Build
 
 ```bash
 python3 scripts/tests/test_corpus.py -v
-python3 scripts/corpus/build_tower.py --scope torah
+python3 scripts/corpus/build_tower.py
 # Or: Actions → Corpus Tower → Run workflow
 ```
 
