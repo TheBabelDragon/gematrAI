@@ -3,11 +3,7 @@
   "valuesBase": "./corpus/generated/values/",
   "phrasesBase": "./corpus/generated/phrases/",
   "bucketSize": 100,
-  "systems": [
-    "hebrew-standard",
-    "hebrew-gadol",
-    "hebrew-katan"
-  ],
+  "systems": ["hebrew-standard", "hebrew-gadol", "hebrew-katan"],
   "stats": {
     "unique_terms": 39966,
     "indexed_term_slots": 119898,
@@ -31,5 +27,8 @@
   "name": "gematrAI Corpus Tower",
   "exhaustive": true,
   "disclaimer": "Gematria values are computed by gematrAI from selected Sefaria export texts. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
-  "lowValuesUrl": "./corpus/generated/values_low.json"
+  "lowValuesUrl": "./corpus/generated/values_low.json",
+  "midValuesUrl": "./corpus/generated/values_mid.json",
+  "auxValuesUrl": "./corpus/generated/values_aux.json",
+  "v358Url": "./corpus/generated/values_v358.json"
 }
