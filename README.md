@@ -4,9 +4,11 @@
 
 > Because assigning numbers to letters wasn’t computational enough.
 
-gematrAI is a pure static web application for exploring classical and modern gematria systems. It runs entirely in the browser — no backend, no API keys, no build step, no external AI service.
+gematrAI is a pure static web application for exploring classical and modern gematria systems. It runs entirely in the browser — no backend, no API keys, no runtime external AI service.
 
 **Live:** [https://thebabeldragon.github.io/gematrAI/](https://thebabeldragon.github.io/gematrAI/)
+
+Custom-domain experiments (e.g. gematrai.com) were reverted; the canonical public URL is the GitHub Pages default above. No `CNAME` file is present in the repo.
 
 ---
 
@@ -44,40 +46,50 @@ Variants are named explicitly; competing definitions are never silently mixed.
 
 1. **Live calculator** — Latin, Hebrew Unicode, Greek Unicode, or mixed text. Results update as you type.
 2. **Letter-by-letter breakdown** — expandable per system, with copy-to-clipboard for totals.
-3. **Reverse lookup** — search the included local corpus by numerical value and system.
-4. **Equivalence explorer** — other corpus entries sharing the same total under the active system; click to load.
-5. **AI Interpretation panel** — deterministic, client-side observations only. No supernatural claims, no external model.
-6. **Shareable state** — query and selected system encoded in the URL hash (`#q=…&sys=…`).
-7. **Hebrew UX** — RTL-aware display, correct Unicode preservation, finals handled per system.
-8. **Responsive** — desktop, tablet, iPhone.
+3. **Corpus Tower** — reverse lookup and equivalence over a large pre-built Hebrew index derived from Sefaria Tanakh text (values computed by gematrAI engines, not Sefaria annotations).
+4. **Seed corpus** — small illustrative Hebrew / English / Greek terms in `data/corpus.js` for instant offline matches.
+5. **Equivalence explorer** — other corpus terms sharing the same total under the active system; click to load and continue exploring.
+6. **AI Interpretation panel** — deterministic, client-side observations only. No supernatural claims, no external model.
+7. **Shareable state** — query, selected system, and exploration path encoded in the URL hash (`#q=…&sys=…`).
+8. **Hebrew UX** — RTL-aware display, correct Unicode preservation, finals handled per system.
+9. **Responsive** — desktop, tablet, iPhone.
 
 ---
 
-## Local corpus
+## Corpus Tower
 
-The reverse-lookup and equivalence features use a **small illustrative corpus** (~120 entries across Hebrew, English, and Greek). It is **not comprehensive**. The UI labels it as the included/local corpus.
+The primary reverse-lookup / equivalence data is the **Corpus Tower** under `corpus/generated/`.
 
-Values are computed at runtime from the same calculation engines — no pre-baked totals that can drift from the live mappings.
+- Source text: Sefaria export (Tanakh scope).
+- Values: computed at build time by the same gematria engines used in the browser.
+- Runtime: the browser only fetches static JSON shards (`values_low.json`, `values_mid.json`, and optional per-bucket files). It never calls Sefaria live for search.
+
+See `corpus/README.md` for layers, disclaimer, and build notes.
+
+A small **seed corpus** (`data/corpus.js`) remains for quick English/Greek/Hebrew examples and offline fallback.
 
 ---
 
 ## Architecture
 
 ```
-index.html
-styles.css
-app.js                  # UI controller, URL state, rendering
+index.html              # App shell
+styles.css / styles-eq.css
+app.js                  # UI, URL state, tower fetch, rendering
 gematria/
-  hebrew.js             # Mispar Hechrechi / Gadol / Katan
-  greek.js              # Isopsephy
-  english.js            # Ordinal / Reduction / Pythagorean
+  hebrew.js / greek.js / english.js
   systems.js            # Registry + calculateAll / calculateOne
 data/
-  corpus.js             # Local illustrative terms
+  corpus.js             # Seed illustrative terms
+corpus/
+  generated/            # Tower artifacts (manifest, value packs)
+  fixtures/             # Offline test segments
+scripts/corpus/         # Build & normalize helpers (CI / local)
 tests/
-  test-gematria.js      # Engine test suite
-  runner.html           # Browser test runner
-README.md
+  test-gematria.js + runner.html
+.github/workflows/
+  static.yml            # Deploy static site to GitHub Pages
+  corpus.yml            # Rebuild tower (manual / scheduled)
 ```
 
 Calculation logic is fully separated from the UI. Additional systems can be registered in `systems.js` without touching the view layer.
@@ -86,38 +98,47 @@ Calculation logic is fully separated from the UI. Additional systems can be regi
 
 ## Running locally
 
-No build step. Serve the directory over HTTP (ES modules require a server; `file://` may be blocked by browsers):
+No frontend build step. Serve the directory over HTTP (ES modules require a server; `file://` may be blocked):
 
 ```bash
-# Python
 python -m http.server 8080
-
-# Node
-npx serve .
-
-# Then open http://localhost:8080
+# or: npx serve .
+# then open http://localhost:8080
 ```
 
-### Tests
+### Engine tests
 
-Open `tests/runner.html` in a browser (same origin / local server) or inspect the console after loading the module. All calculation engines include representative vectors for finals, reduction, and mixed scripts.
+Open `tests/runner.html` under the same local server.
+
+### Corpus pipeline tests
+
+```bash
+python3 scripts/tests/test_corpus.py -v
+```
+
+(Requires the corpus helper modules under `scripts/corpus/`.)
 
 ---
 
 ## GitHub Pages deployment
 
-This repository is configured for **GitHub Pages from the `main` branch root**.
+Deployment is handled by **Actions** (`.github/workflows/static.yml`):
 
-1. Repo → **Settings** → **Pages**
-2. Source: **Deploy from a branch**
-3. Branch: `main` / `/ (root)`
-4. Save
+- Trigger: push to `main` or manual `workflow_dispatch`
+- Artifact: the repository root (static assets + generated corpus)
+- Target: GitHub Pages environment
 
-After the first push, the site is available at:
+Public URL:
 
 **https://thebabeldragon.github.io/gematrAI/**
 
-No Actions workflow required for a pure static site.
+A previous custom-domain `CNAME` (gematrai.com) was removed to restore the default Pages URL and avoid leftover DNS / HTML path issues. Re-adding a custom domain requires:
+
+1. DNS records at the registrar pointing to GitHub Pages
+2. A root `CNAME` file containing the domain name
+3. Enabling the custom domain under Repo → Settings → Pages
+
+Until then, use the `github.io` URL only.
 
 ---
 
@@ -129,10 +150,11 @@ Aesthetic: archaeological-computational instrument — dark surface, high-contra
 
 ## Limitations
 
-- Local corpus is illustrative only; reverse lookup will not find arbitrary dictionary words.
-- Nikud (Hebrew vowel points) and Greek diacritics are ignored for value contribution but preserved in display.
+- Corpus Tower coverage is the indexed Sefaria Tanakh export for the build that is checked in; it is not a live dictionary of every possible word.
+- Nikud (Hebrew vowel points) and Greek diacritics are ignored for value contribution but preserved in display where present.
 - No server-side persistence or user accounts.
 - “AI Interpretation” is rule-based deterministic text, not a language model.
+- Full tower rebuild scripts may require additional local setup; pre-built artifacts under `corpus/generated/` are what the live site uses.
 
 ---
 
