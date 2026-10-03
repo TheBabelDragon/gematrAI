@@ -3,7 +3,26 @@
   "valuesBase": "./corpus/generated/values/",
   "phrasesBase": "./corpus/generated/phrases/",
   "bucketSize": 100,
-  "systems": ["hebrew-standard", "hebrew-gadol", "hebrew-katan"],
+  "systems": [
+    "hebrew-standard",
+    "hebrew-gadol",
+    "hebrew-katan",
+    "english-ordinal",
+    "english-reduction",
+    "english-pythagorean",
+    "greek-isopsephy"
+  ],
+  "towerSystems": [
+    "hebrew-standard",
+    "hebrew-gadol",
+    "hebrew-katan"
+  ],
+  "seedSystems": [
+    "english-ordinal",
+    "english-reduction",
+    "english-pythagorean",
+    "greek-isopsephy"
+  ],
   "stats": {
     "unique_terms": 39966,
     "indexed_term_slots": 119898,
@@ -21,14 +40,16 @@
     },
     "n_books": 39,
     "segments": 23206,
-    "texts": 39
+    "texts": 39,
+    "seed_terms": 218
   },
-  "tower": "0.2",
+  "tower": "0.3",
   "name": "gematrAI Corpus Tower",
   "exhaustive": true,
-  "disclaimer": "Gematria values are computed by gematrAI from selected Sefaria export texts. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
+  "disclaimer": "Gematria values are computed by gematrAI from selected Sefaria export texts and a local seed lexicon. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
   "lowValuesUrl": "./corpus/generated/values_low.json",
   "midValuesUrl": "./corpus/generated/values_mid.json",
+  "seedValuesUrl": "./corpus/generated/values_seed.json",
   "auxValuesUrl": "./corpus/generated/values_aux.json",
   "v358Url": "./corpus/generated/values_v358.json"
 }
