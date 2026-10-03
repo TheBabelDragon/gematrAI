@@ -48,8 +48,5 @@
   "exhaustive": true,
   "disclaimer": "Gematria values are computed by gematrAI from selected Sefaria export texts and a local seed lexicon. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
   "lowValuesUrl": "./corpus/generated/values_low.json",
-  "midValuesUrl": "./corpus/generated/values_mid.json",
-  "seedValuesUrl": "./corpus/generated/values_seed.json",
-  "auxValuesUrl": "./corpus/generated/values_aux.json",
-  "v358Url": "./corpus/generated/values_v358.json"
+  "midValuesUrl": "./corpus/generated/values_mid.json"
 }
