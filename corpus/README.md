@@ -6,7 +6,7 @@ Progressively expanding, **non-user-editable** textual/gematria corpus for gemat
 
 | Level | Name | Description |
 |-------|------|-------------|
-| 0 | Source | Sefaria text + metadata (fetched at build time) |
+| 0 | Source | Sefaria text + metadata (fetched at build time) or local fixtures |
 | 1 | Tokens | Normalized Hebrew tokens with source refs |
 | 2 | Gematria | Values from gematrAI engines (not from Sefaria) |
 | 3 | Reverse indexes | number → matching tokens |
@@ -21,9 +21,11 @@ Initial provider: **[Sefaria](https://www.sefaria.org)**
 - Export: https://github.com/Sefaria/Sefaria-Export  
 - Preferred version: *Tanach with Text Only* (Public Domain)
 
-## Scope (tower 0.2)
+Offline fixtures live in `corpus/fixtures/tower_segments.json` so tests and local builds always work.
 
-Full **Tanakh** Hebrew (Torah + Prophets + Writings) — 39 books.
+## Scope
+
+Checked-in `corpus/generated/` may contain a larger pre-built Tanakh index. Local rebuilds default to fixtures until a full export is provided to the builder.
 
 ## Build
 
@@ -32,5 +34,12 @@ python3 scripts/tests/test_corpus.py -v
 python3 scripts/corpus/build_tower.py
 # Or: Actions → Corpus Tower → Run workflow
 ```
+
+Outputs under `corpus/generated/`:
+
+- `manifest.json` — browser entry point
+- `values/` — sharded reverse indexes
+- `values_low.json` / `values_mid.json` — compact packs for common values
+- `metadata/build.json` — build stats
 
 The browser does **not** call Sefaria at runtime for corpus search.

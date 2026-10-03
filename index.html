@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0c0b09" />
+  <meta name="color-scheme" content="dark" />
   <meta name="description" content="gematrAI — client-side gematria explorer with Sefaria-backed corpus tower. Pure static, no backend." />
+  <meta property="og:title" content="gematrAI — Gematria Explorer" />
+  <meta property="og:description" content="Hebrew, Greek, and English gematria systems with reverse lookup and equivalence explorer. Pure client-side." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://thebabeldragon.github.io/gematrAI/" />
   <title>gematrAI — Gematria Explorer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%230c0b09'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='Georgia,serif' font-size='16' fill='%23c4a35a'%3Eg%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Serif+Hebrew:wght@400;600&family=Noto+Serif:wght@400;600&display=swap" rel="stylesheet" />
@@ -32,6 +39,7 @@
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
+            aria-label="Gematria input"
           ></textarea>
           <div class="input-meta">
             <span id="char-count">0 chars</span>
@@ -42,7 +50,7 @@
         <div id="explore-history" class="explore-history" style="display:none" aria-label="Exploration path"></div>
 
         <div class="panel-title" style="margin-top:1.25rem">Results</div>
-        <div id="results" class="results-list">
+        <div id="results" class="results-list" role="region" aria-live="polite">
           <div class="empty-state">Enter Latin, Hebrew, or Greek text</div>
         </div>
       </section>
@@ -100,8 +108,8 @@
           Secondary: search the same corpus index by numerical value (e.g. 42).
         </p>
         <div class="reverse-form">
-          <input type="number" id="reverse-value" placeholder="Value" min="0" step="1" />
-          <select id="reverse-system"></select>
+          <input type="number" id="reverse-value" placeholder="Value" min="0" step="1" aria-label="Reverse lookup value" />
+          <select id="reverse-system" aria-label="System for reverse lookup"></select>
           <button type="button" id="reverse-btn">Search</button>
         </div>
         <div id="match-list" class="match-list"></div>
