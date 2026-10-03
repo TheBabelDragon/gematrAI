@@ -31,11 +31,13 @@ def value_hebrew_gadol(text: str) -> int:
 def value_hebrew_katan(text: str) -> int:
     return digital_root(value_hebrew_standard(text))
 
+# Classical isopsephy — final sigma ς = 200 (matches gematria/greek.js)
 _GREEK = {
     "\u03B1": 1, "\u03B2": 2, "\u03B3": 3, "\u03B4": 4, "\u03B5": 5,
-    "\u03C2": 6, "\u03C3": 6, "\u03B6": 7, "\u03B7": 8, "\u03B8": 9,
+    "\u03B6": 7, "\u03B7": 8, "\u03B8": 9,
     "\u03B9": 10, "\u03BA": 20, "\u03BB": 30, "\u03BC": 40, "\u03BD": 50,
-    "\u03BE": 60, "\u03BF": 70, "\u03C0": 80, "\u03C1": 100, "\u03C4": 300,
+    "\u03BE": 60, "\u03BF": 70, "\u03C0": 80, "\u03C1": 100,
+    "\u03C3": 200, "\u03C2": 200, "\u03C4": 300,
     "\u03C5": 400, "\u03C6": 500, "\u03C7": 600, "\u03C8": 700, "\u03C9": 800,
 }
 
@@ -46,14 +48,15 @@ def value_english_ordinal(text: str) -> int:
     return sum((ord(c) - 96) for c in text.lower() if "a" <= c <= "z")
 
 def value_english_reduction(text: str) -> int:
-    return digital_root(value_english_ordinal(text))
-
-def value_english_pythagorean(text: str) -> int:
+    """Per-letter reduction A=1…I=9, J=1… — matches gematria/english.js."""
     total = 0
     for c in text.lower():
         if "a" <= c <= "z":
             total += ((ord(c) - 96 - 1) % 9) + 1
     return total
+
+def value_english_pythagorean(text: str) -> int:
+    return value_english_reduction(text)
 
 def systems_for_token(normalized: str, language: str) -> dict[str, int]:
     lang = (language or "he").lower()
