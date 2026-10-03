@@ -33,23 +33,50 @@ function restoreState(){const hash=location.hash.slice(1);if(!hash)return;const 
 
 function towerSet(id,v){const el=$(id);if(el)el.textContent=v;}
 
-async function loadTowerManifest(){try{const res=await fetch('./corpus/generated/manifest.json',{cache:'no-cache'});if(!res.ok)throw new Error('manifest '+res.status);towerManifest=await res.json();const st=towerManifest.stats||{};towerSet('#tower-name',towerManifest.name||'Sefaria');towerSet('#tower-ver',towerManifest.tower||'0.3');towerSet('#tower-build',towerManifest.buildId||'—');towerSet('#tower-segments',st.segments!=null?String(st.segments):'—');towerSet('#tower-tokens',st.unique_terms!=null?String(st.unique_terms):'—');towerSet('#tower-books',st.n_books!=null?String(st.n_books):'—');const scope=(towerManifest.systems||[]).length?(towerManifest.systems||[]).join(', '):'hebrew';towerSet('#tower-scope',scope+(st.seed_terms?' · seed '+st.seed_terms:''));}catch(e){towerSet('#tower-name','seed only');towerSet('#tower-ver','—');towerSet('#tower-build','offline');towerSet('#tower-segments','—');towerSet('#tower-tokens','—');towerSet('#tower-books','—');towerSet('#tower-scope','english-ordinal + seed');towerManifest={systems:SEED_SYS,seedSystems:SEED_SYS,bucketSize:100};}}
+function defaultManifest(){return{
+  systems:[...HEBREW_SYS,...SEED_SYS],
+  towerSystems:[...HEBREW_SYS],
+  seedSystems:[...SEED_SYS],
+  bucketSize:100,
+  lowValuesUrl:'./corpus/generated/values_low.json',
+  midValuesUrl:'./corpus/generated/values_mid.json',
+  valuesBase:'./corpus/generated/values/',
+};}
+
+async function loadTowerManifest(){try{const res=await fetch('./corpus/generated/manifest.json',{cache:'no-cache'});if(!res.ok)throw new Error('manifest '+res.status);const m=await res.json();towerManifest={...defaultManifest(),...m};
+  // drop missing seed pack URL so we never 404-block hebrew packs
+  if(towerManifest.seedValuesUrl){
+    try{const pr=await fetch(towerManifest.seedValuesUrl,{method:'HEAD',cache:'no-cache'});if(!pr.ok)delete towerManifest.seedValuesUrl;}catch(e){delete towerManifest.seedValuesUrl;}
+  }
+  const st=towerManifest.stats||{};towerSet('#tower-name',towerManifest.name||'Sefaria');towerSet('#tower-ver',towerManifest.tower||'0.3');towerSet('#tower-build',towerManifest.buildId||'—');towerSet('#tower-segments',st.segments!=null?String(st.segments):'—');towerSet('#tower-tokens',st.unique_terms!=null?String(st.unique_terms):'—');towerSet('#tower-books',st.n_books!=null?String(st.n_books):'—');const scope=(towerManifest.systems||[]).join(', ')||'hebrew';towerSet('#tower-scope',scope+(st.seed_terms?' · seed '+st.seed_terms:''));
+}catch(e){towerSet('#tower-name','packs + seed');towerSet('#tower-ver','—');towerSet('#tower-build','fallback');towerSet('#tower-segments','—');towerSet('#tower-tokens','—');towerSet('#tower-books','—');towerSet('#tower-scope','hebrew + english-ordinal seed');towerManifest=defaultManifest();}}
 
 async function loadPack(url,cacheKey){if(!url)return null;if(shardCache.has(cacheKey))return shardCache.get(cacheKey);try{const res=await fetch(url,{cache:'force-cache'});const data=res.ok?await res.json():null;shardCache.set(cacheKey,data);return data;}catch(e){shardCache.set(cacheKey,null);return null;}}
 
-async function fetchShard(systemId,value){if(!towerManifest)return[];const fromPack=(pack)=>{if(!pack||!pack[systemId])return null;const hit=pack[systemId][String(value)]||pack[systemId][value];return hit?sortTerms(hit):null;};
-  // Seed pack (english-ordinal / reduction / greek) — primary path for non-Hebrew
-  if(towerManifest.seedValuesUrl){const hit=fromPack(await loadPack(towerManifest.seedValuesUrl,'__seed__'));if(hit)return hit;}
-  if(value<=99&&towerManifest.lowValuesUrl){const hit=fromPack(await loadPack(towerManifest.lowValuesUrl,'__low__'));if(hit)return hit;}
-  if(value<=999&&towerManifest.midValuesUrl){const hit=fromPack(await loadPack(towerManifest.midValuesUrl,'__mid__'));if(hit)return hit;}
+/** Non-empty hit list or null (miss → try next source). */
+function fromPack(pack,systemId,value){if(!pack||!pack[systemId])return null;const hit=pack[systemId][String(value)]||pack[systemId][value];if(!hit||!hit.length)return null;return sortTerms(hit);}
+
+async function fetchShard(systemId,value){if(!towerManifest)towerManifest=defaultManifest();
+  // 1) Compact low/mid packs first (hebrew tower)
+  if(value<=99&&towerManifest.lowValuesUrl){const hit=fromPack(await loadPack(towerManifest.lowValuesUrl,'__low__'),systemId,value);if(hit)return hit;}
+  if(value<=999&&towerManifest.midValuesUrl){const hit=fromPack(await loadPack(towerManifest.midValuesUrl,'__mid__'),systemId,value);if(hit)return hit;}
+  // 2) Optional seed pack (english/greek) — only for seed systems, only if URL exists
+  if(SEED_SYS.includes(systemId)&&towerManifest.seedValuesUrl){const hit=fromPack(await loadPack(towerManifest.seedValuesUrl,'__seed__'),systemId,value);if(hit)return hit;}
+  // 3) Sharded JSON under values/
   const size=towerManifest.bucketSize||100;const lo=Math.floor(value/size)*size;const b=String(lo).padStart(4,'0')+'-'+String(lo+size-1).padStart(4,'0');const key=systemId+'|'+b;
-  if(shardCache.has(key)){const payload=shardCache.get(key);return sortTerms((payload&&(payload[String(value)]||payload[value]))||[]);}
+  if(shardCache.has(key)){const payload=shardCache.get(key);const hit=(payload&&(payload[String(value)]||payload[value]))||[];return sortTerms(hit);}
   const url=(towerManifest.valuesBase||'./corpus/generated/values/')+systemId+'/'+b+'.json';
   try{const res=await fetch(url,{cache:'force-cache'});if(!res.ok){shardCache.set(key,{});return[];}const payload=await res.json();shardCache.set(key,payload);return sortTerms((payload[String(value)]||payload[value])||[]);}catch(e){shardCache.set(key,{});return[];}}
 
 function getSeedMatches(systemId,value){const sys=getSystem(systemId);if(!sys)return[];return CORPUS.map(e=>({term:e.term,language:e.language,notes:e.notes,total:sys.calculate(e.term).total,c:1,source:'seed'})).filter(e=>e.total===value).sort((a,b)=>a.term.localeCompare(b.term));}
 
-function systemInCorpus(sid){if(!towerManifest)return SEED_SYS.includes(sid);const sys=towerManifest.systems||[];const seed=towerManifest.seedSystems||SEED_SYS;return sys.includes(sid)||seed.includes(sid)||SEED_SYS.includes(sid);}
+function systemInCorpus(sid){
+  if(HEBREW_SYS.includes(sid)||SEED_SYS.includes(sid))return true;
+  if(!towerManifest)return false;
+  const sys=towerManifest.systems||[];
+  const seed=towerManifest.seedSystems||SEED_SYS;
+  return sys.includes(sid)||seed.includes(sid);
+}
 
 function pushHistory(term){const t=norm(term);if(!t)return;if(exploreHistory.length&&exploreHistory[exploreHistory.length-1]===t)return;exploreHistory.push(t);if(exploreHistory.length>MAX_HISTORY)exploreHistory=exploreHistory.slice(-MAX_HISTORY);renderHistory();}
 function renderHistory(){if(!historyEl)return;if(exploreHistory.length<=1){historyEl.style.display='none';historyEl.innerHTML='';return;}historyEl.style.display='flex';historyEl.innerHTML=exploreHistory.map((term,i)=>{const last=i===exploreHistory.length-1;const dir=termDir(term);return(i?'<span class="hist-sep">→</span>':'')+(last?'<span class="hist-current" dir="'+dir+'">'+esc(term)+'</span>':'<button type="button" class="hist-link" data-hist-idx="'+i+'" dir="'+dir+'">'+esc(term)+'</button>');}).join('');historyEl.querySelectorAll('[data-hist-idx]').forEach(btn=>btn.addEventListener('click',()=>{const idx=+btn.dataset.histIdx;const term=exploreHistory[idx];exploreHistory=exploreHistory.slice(0,idx+1);queryInput.value=term;runCalculation(term,{fromHistory:true});}));}
@@ -68,7 +95,7 @@ async function renderAI(){if(!currentText.trim()||!currentResults.length){aiCont
 
 function populateReverseSystems(){reverseSystem.innerHTML=SYSTEMS.map(s=>'<option value="'+s.id+'">'+esc(s.short)+' — '+esc(s.name)+'</option>').join('');}
 
-async function runReverseLookup(){const val=parseInt(reverseValue.value,10),sysId=reverseSystem.value;if(isNaN(val)||val<0){matchList.innerHTML='<div class="empty-state">Enter a non-negative integer</div>';return;}let towerHits=[];if(systemInCorpus(sysId))towerHits=await fetchShard(sysId,val);const seed=getSeedMatches(sysId,val);if(!towerHits.length&&!seed.length){matchList.innerHTML='<div class="empty-state">No corpus matches for '+val+'</div>';return;}let html='';if(towerHits.length){const occ=towerHits.reduce((s,h)=>s+(h.c||0),0);html+='<div class="sys-block-meta">'+towerHits.length+' unique · '+occ+' occ · tower</div>';html+=towerHits.slice(0,40).map(h=>{const surface=h.s||h.t;return'<div class="match-item" data-term="'+esc(surface)+'" data-sys="'+sysId+'"><div class="match-term" dir="rtl">'+esc(surface)+'</div><div class="match-meta">'+(h.c||0)+' occ · '+esc((h.b||[]).slice(0,3).join(', '))+'</div>'+((h.r&&h.r[0])?'<div class="match-refs">'+esc(h.r.slice(0,3).join(', '))+'</div>':'')+'</div>';}).join('');}if(seed.length){html+='<div class="sys-block-meta">Seed · '+seed.length+'</div>';html+=seed.map(m=>'<div class="match-item" data-term="'+esc(m.term)+'" data-sys="'+sysId+'"><div class="match-term" dir="'+termDir(m.term)+'">'+esc(m.term)+'</div><div class="match-meta">seed · '+esc(m.language||'')+'</div></div>').join('');}matchList.innerHTML=html;matchList.querySelectorAll('[data-term]').forEach(el=>el.addEventListener('click',()=>loadTerm(el.dataset.term,el.dataset.sys||sysId)));}
+async function runReverseLookup(){const val=parseInt(reverseValue.value,10),sysId=reverseSystem.value;if(isNaN(val)||val<0){matchList.innerHTML='<div class="empty-state">Enter a non-negative integer</div>';return;}matchList.innerHTML='<div class="empty-state">Searching…</div>';try{let towerHits=[];if(systemInCorpus(sysId))towerHits=await fetchShard(sysId,val);const seed=getSeedMatches(sysId,val);if(!towerHits.length&&!seed.length){matchList.innerHTML='<div class="empty-state">No corpus matches for '+val+'</div>';return;}let html='';if(towerHits.length){const occ=towerHits.reduce((s,h)=>s+(h.c||0),0);html+='<div class="sys-block-meta">'+towerHits.length+' unique · '+occ+' occ · tower</div>';html+=towerHits.slice(0,40).map(h=>{const surface=h.s||h.t;return'<div class="match-item" data-term="'+esc(surface)+'" data-sys="'+sysId+'"><div class="match-term" dir="'+termDir(surface)+'">'+esc(surface)+'</div><div class="match-meta">'+(h.c||0)+' occ · '+esc((h.b||[]).slice(0,3).join(', '))+'</div>'+((h.r&&h.r[0])?'<div class="match-refs">'+esc(h.r.slice(0,3).join(', '))+'</div>':'')+'</div>';}).join('');}if(seed.length){html+='<div class="sys-block-meta">Seed · '+seed.length+'</div>';html+=seed.map(m=>'<div class="match-item" data-term="'+esc(m.term)+'" data-sys="'+sysId+'"><div class="match-term" dir="'+termDir(m.term)+'">'+esc(m.term)+'</div><div class="match-meta">seed · '+esc(m.language||'')+'</div></div>').join('');}matchList.innerHTML=html;matchList.querySelectorAll('[data-term]').forEach(el=>el.addEventListener('click',()=>loadTerm(el.dataset.term,el.dataset.sys||sysId)));}catch(err){matchList.innerHTML='<div class="empty-state">Lookup failed — try again</div>';console.error('reverse lookup',err);}}
 
 function init(){populateReverseSystems();loadTowerManifest();let debounce;queryInput.addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(()=>{const t=queryInput.value;exploreHistory=t.trim()?[norm(t)]:[];runCalculation(t,{fromHistory:true});},80);});reverseBtn.addEventListener('click',runReverseLookup);reverseValue.addEventListener('keydown',e=>{if(e.key==='Enter')runReverseLookup();});document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();queryInput.focus();queryInput.select();}});restoreState();if(!queryInput.value)resultsEl.innerHTML='<div class="empty-state">Enter Latin, Hebrew, or Greek text</div>';}
 init();
