@@ -1,52 +1,48 @@
 {
-  "buildId": "20261001T000846Z",
+  "buildId": "20261004T112840Z",
   "valuesBase": "./corpus/generated/values/",
   "phrasesBase": "./corpus/generated/phrases/",
   "bucketSize": 100,
   "systems": [
-    "hebrew-standard",
+    "english-ordinal",
+    "english-pythagorean",
+    "english-reduction",
+    "greek-isopsephy",
     "hebrew-gadol",
     "hebrew-katan",
-    "english-ordinal",
-    "english-reduction",
-    "english-pythagorean",
-    "greek-isopsephy"
-  ],
-  "towerSystems": [
-    "hebrew-standard",
-    "hebrew-gadol",
-    "hebrew-katan"
-  ],
-  "seedSystems": [
-    "english-ordinal",
-    "english-reduction",
-    "english-pythagorean",
-    "greek-isopsephy"
+    "hebrew-standard"
   ],
   "stats": {
-    "unique_terms": 39966,
-    "indexed_term_slots": 119898,
+    "unique_terms": 14,
+    "indexed_term_slots": 40,
     "terms_per_system": {
-      "hebrew-katan": 39966,
-      "hebrew-gadol": 39966,
-      "hebrew-standard": 39966
+      "hebrew-standard": 11,
+      "hebrew-katan": 11,
+      "english-pythagorean": 2,
+      "hebrew-gadol": 11,
+      "english-reduction": 2,
+      "greek-isopsephy": 1,
+      "english-ordinal": 2
     },
-    "token_occurrences": 920373,
-    "phrases": 0,
+    "token_occurrences": 49,
+    "phrases": 36,
     "indexed_values": {
-      "hebrew-standard": 1191,
-      "hebrew-gadol": 1585,
-      "hebrew-katan": 50
+      "hebrew-standard": 11,
+      "hebrew-gadol": 11,
+      "hebrew-katan": 6,
+      "english-ordinal": 2,
+      "english-reduction": 2,
+      "english-pythagorean": 2,
+      "greek-isopsephy": 1
     },
-    "n_books": 39,
-    "segments": 23206,
-    "texts": 39,
-    "seed_terms": 218
+    "n_books": 2,
+    "segments": 5,
+    "texts": 2
   },
-  "tower": "0.3",
+  "tower": "0.2",
   "name": "gematrAI Corpus Tower",
-  "exhaustive": true,
-  "disclaimer": "Gematria values are computed by gematrAI from selected Sefaria export texts and a local seed lexicon. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
+  "exhaustive": false,
+  "disclaimer": "Gematria values are computed by gematrAI from selected text segments. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
   "lowValuesUrl": "./corpus/generated/values_low.json",
   "midValuesUrl": "./corpus/generated/values_mid.json"
 }

@@ -1,25 +1,32 @@
 {
-  "tower": "0.1",
+  "tower": "0.2",
   "name": "gematrAI Corpus Tower",
-  "source": "sefaria",
-  "scope": ["torah"],
-  "build": "20260930T231024Z",
-  "builtAt": "2026-09-30T23:11:23.039446+00:00",
-  "systems": ["hebrew-standard", "hebrew-gadol", "hebrew-katan"],
+  "source": "fixtures+local",
+  "scope": [
+    "fixtures"
+  ],
+  "build": "20261004T112840Z",
+  "builtAt": "2026-10-04T11:28:40.350951+00:00",
+  "systems": [
+    "english-ordinal",
+    "english-pythagorean",
+    "english-reduction",
+    "greek-isopsephy",
+    "hebrew-gadol",
+    "hebrew-katan",
+    "hebrew-standard"
+  ],
   "stats": {
-    "segments": 5846,
-    "unique_tokens": 12857,
-    "token_occurrences": 80606,
-    "books": {
-      "Deuteronomy": 956,
-      "Exodus": 1210,
-      "Genesis": 1533,
-      "Leviticus": 859,
-      "Numbers": 1288
-    },
-    "n_books": 5
+    "segments": 5,
+    "unique_tokens": 14,
+    "token_occurrences": 49,
+    "n_books": 2,
+    "books": [
+      "Fixture",
+      "Genesis"
+    ]
   },
-  "disclaimer": "Gematria values are computed by gematrAI. Numerical equivalence does not establish semantic, theological, historical, or causal relationships. Text and licenses originate from Sefaria.",
+  "disclaimer": "Gematria values are computed by gematrAI from selected text segments. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
   "sefaria": {
     "docs": "https://developers.sefaria.org/reference/get-v3-texts",
     "export": "https://github.com/Sefaria/Sefaria-Export"
