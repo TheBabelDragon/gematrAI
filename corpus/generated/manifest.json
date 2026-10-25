@@ -1,5 +1,5 @@
 {
-  "buildId": "20261018T100353Z",
+  "buildId": "20261025T102026Z",
   "valuesBase": "./corpus/generated/values/",
   "phrasesBase": "./corpus/generated/phrases/",
   "bucketSize": 100,
@@ -16,13 +16,13 @@
     "unique_terms": 14,
     "indexed_term_slots": 40,
     "terms_per_system": {
-      "greek-isopsephy": 1,
       "hebrew-katan": 11,
       "hebrew-standard": 11,
+      "english-ordinal": 2,
       "hebrew-gadol": 11,
-      "english-pythagorean": 2,
       "english-reduction": 2,
-      "english-ordinal": 2
+      "english-pythagorean": 2,
+      "greek-isopsephy": 1
     },
     "token_occurrences": 49,
     "phrases": 36,
