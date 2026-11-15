@@ -1,0 +1,56 @@
+name: Rust engine
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust.yml"
+  pull_request:
+    paths:
+      - "rust/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Test core crates
+        working-directory: rust
+        run: cargo test -p gematra-unicode -p gematra-ciphers -p gematra-core -p gematra-fixtures
+
+      - name: Build CLI
+        working-directory: rust
+        run: cargo build -p gematra-cli --release
+
+      - name: Run fixture suite via CLI
+        working-directory: rust
+        run: ./target/release/gematra fixtures
+
+      - name: Build WASM
+        working-directory: rust
+        run: cargo build -p gematra-wasm --release --target wasm32-unknown-unknown
+
+      - name: Install wasm-bindgen
+        run: cargo install wasm-bindgen-cli --version 0.2.92 --locked || cargo install wasm-bindgen-cli
+
+      - name: Bindgen WASM artifacts
+        working-directory: rust
+        run: |
+          wasm-bindgen target/wasm32-unknown-unknown/release/gematra_wasm.wasm \
+            --out-dir ../wasm \
+            --target web \
+            --no-typescript
+          ls -la ../wasm
