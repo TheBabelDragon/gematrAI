@@ -1,4 +1,4 @@
-# Deploy static content to GitHub Pages
+# Deploy static content to GitHub Pages (includes WASM engine build)
 name: Deploy static content to Pages
 
 on:
@@ -25,14 +25,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Build WASM engine
+        working-directory: rust
+        run: cargo build -p gematra-wasm --release --target wasm32-unknown-unknown
+
+      - name: Install wasm-bindgen
+        run: cargo install wasm-bindgen-cli --version 0.2.92 --locked || cargo install wasm-bindgen-cli
+
+      - name: Generate WASM JS glue into wasm/
+        working-directory: rust
+        run: |
+          mkdir -p ../wasm
+          wasm-bindgen target/wasm32-unknown-unknown/release/gematra_wasm.wasm \
+            --out-dir ../wasm \
+            --target web \
+            --no-typescript
+          ls -la ../wasm
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Entire repo root (index.html, app assets, corpus/generated).
-          # No CNAME — default Pages URL only. Leftover placeholder files removed.
+          # Entire repo root including generated wasm/
           path: '.'
 
       - name: Deploy to GitHub Pages
