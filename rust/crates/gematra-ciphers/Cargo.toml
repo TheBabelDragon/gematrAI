@@ -1,0 +1,11 @@
+[package]
+name = "gematra-ciphers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cipher definitions and letter-to-value maps for gematrAI"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+gematra-unicode = { path = "../gematra-unicode" }

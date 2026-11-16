@@ -1,0 +1,13 @@
+[package]
+name = "gematra-unicode"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Unicode processing, normalization, and classification for gematrAI"
+
+[dependencies]
+unicode-normalization = { workspace = true }
+unicode-segmentation = { workspace = true }
+unicode-script = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
