@@ -5,10 +5,14 @@ on:
     branches: [main, "feat/**"]
     paths:
       - "rust/**"
+      - "js/**"
+      - "app.js"
       - ".github/workflows/rust.yml"
   pull_request:
     paths:
       - "rust/**"
+      - "js/**"
+      - "app.js"
   workflow_dispatch:
 
 jobs:
@@ -49,8 +53,18 @@ jobs:
       - name: Bindgen WASM artifacts
         working-directory: rust
         run: |
+          mkdir -p ../wasm
           wasm-bindgen target/wasm32-unknown-unknown/release/gematra_wasm.wasm \
             --out-dir ../wasm \
             --target web \
             --no-typescript
           ls -la ../wasm
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gematra-wasm
+          path: |
+            wasm/gematra_wasm.js
+            wasm/gematra_wasm_bg.wasm
+          if-no-files-found: error
