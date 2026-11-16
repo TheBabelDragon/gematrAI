@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/gematra-core",
+    "crates/gematra-unicode",
+    "crates/gematra-ciphers",
+    "crates/gematra-wasm",
+    "crates/gematra-cli",
+    "crates/gematra-fixtures",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["TheBabelDragon"]
+repository = "https://github.com/TheBabelDragon/gematrAI"
+
+[workspace.dependencies]
+serde = { version = "=1.0.195", features = ["derive"] }
+serde_json = "=1.0.111"
+thiserror = "=1.0.56"
+unicode-normalization = "=0.1.22"
+unicode-segmentation = "=1.10.1"
+unicode-script = "=0.5.5"
+wasm-bindgen = "=0.2.92"
+js-sys = "=0.3.69"
+console_error_panic_hook = "=0.1.7"
+getrandom = { version = "=0.2.12", features = ["js"] }
+clap = { version = "=4.4.18", features = ["derive"] }
