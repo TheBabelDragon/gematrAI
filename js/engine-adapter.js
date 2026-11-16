@@ -1,6 +1,9 @@
 /**
  * Narrow adapter between the dashboard (app.js) and the Rust/WASM engine.
  * WASM is the sole authoritative calculation engine. No silent JS fallback.
+ *
+ * Default wasmBase is ../wasm/ so dynamic imports resolve correctly from
+ * js/engine-adapter.js (not relative to the document URL).
  */
 
 let wasm = null;
@@ -15,14 +18,16 @@ export function engineError() {
   return initError;
 }
 
-export async function initEngine(wasmBase = './wasm/') {
+export async function initEngine(wasmBase = '../wasm/') {
   if (wasm) return wasm;
   if (initPromise) return initPromise;
 
+  const base = wasmBase.endsWith('/') ? wasmBase : wasmBase + '/';
+
   initPromise = (async () => {
     try {
-      const mod = await import(wasmBase + 'gematra_wasm.js');
-      await mod.default(wasmBase + 'gematra_wasm_bg.wasm');
+      const mod = await import(base + 'gematra_wasm.js');
+      await mod.default(new URL(base + 'gematra_wasm_bg.wasm', import.meta.url));
       if (typeof mod.health !== 'function' || mod.health() !== 'ok') {
         throw new Error('WASM module loaded but health() did not return ok');
       }
