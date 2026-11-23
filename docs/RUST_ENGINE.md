@@ -62,14 +62,11 @@ many tokens so Python does not re-implement cipher tables.
 ### Invocation
 
 ```bash
-# JSON array on stdin
 echo '[{"id":"t1","text":"שלום"},{"text":"abc","systems":["english-ordinal"]}]' \
   | gematra batch --totals-only
 
-# NDJSON file
 gematra batch --input tokens.ndjson --totals-only --pretty
 
-# Limits (defaults shown)
 gematra batch --max-input-bytes 33554432 --max-items 100000 --max-text-bytes 8192
 ```
 
@@ -79,38 +76,29 @@ gematra batch --max-input-bytes 33554432 --max-items 100000 --max-text-bytes 819
 |-------|----------|---------|
 | `text` | yes | Surface form to calculate |
 | `id` | no | Caller-supplied identifier, echoed in output |
-| `systems` | no | System id list. Omitted or `[]` → all applicable systems. Duplicates deduped. |
+| `systems` | no | System id list. Omitted or `[]` → all applicable. Duplicates deduped. |
 
 ### Output schema
 
-```json
-{
-  "engine_version": "0.1.0",
-  "cipher_registry_version": "1",
-  "unicode_policy_version": "1",
-  "result_count": 2,
-  "results": [
-    {
-      "id": "t1",
-      "original_input": "שלום",
-      "normalized_form": "שלום",
-      "totals": {
-        "hebrew-standard": 376,
-        "hebrew-gadol": 936,
-        "hebrew-katan": 16
-      },
-      "unsupported_count": 0,
-      "calculations": null
-    }
-  ]
-}
-```
+Includes `engine_version`, `cipher_registry_version`, `unicode_policy_version`,
+`result_count`, and per-item `id`, `original_input`, `normalized_form` (from
+`gematra-unicode::analyze`), `totals`, `unsupported_count`, and optional
+`calculations`.
 
-- `normalized_form` is produced by the same `gematra-unicode` analysis path used
-  for calculations (NFC by default). It is **not** a second normalization stack.
-- `--totals-only` omits the full `calculations` array for smaller corpus payloads.
-- Failure is **atomic**: parse errors, invalid system ids, or limit breaches abort
-  with exit code 1/2 and no partial results on stdout.
+- Failure is **atomic**: no partial JSON on stdout.
+- `unsupported_count` is the sum of `unsupported.len()` across systems for that item.
+
+### Strict normalization
+
+`--norm` accepts only `nfc`, `nfd`, or `none` (case-insensitive).
+Invalid values exit nonzero with a diagnostic; there is **no** silent NFC fallback.
+Default when omitted: `nfc`. Applies to `calc`, `all`, and `batch`.
+
+### Bounded input
+
+`gematra batch` reads at most `max_input_bytes + 1` bytes from stdin or `--input`.
+Exceeding the limit fails immediately without buffering the full stream and without
+emitting partial JSON on stdout. No truncation.
 
 ### Safety limits
 
@@ -119,8 +107,6 @@ gematra batch --max-input-bytes 33554432 --max-items 100000 --max-text-bytes 819
 | `--max-input-bytes` | 32 MiB | Reject oversized stdin/file |
 | `--max-items` | 100_000 | Cap batch cardinality |
 | `--max-text-bytes` | 8_192 | Cap single token UTF-8 length |
-
-No silent truncation.
 
 ### Compatibility
 
