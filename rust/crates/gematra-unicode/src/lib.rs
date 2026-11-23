@@ -6,17 +6,24 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub const UNICODE_POLICY_VERSION: &str = "1";
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "UPPERCASE")]
-pub enum NormalizationForm { None, Nfc, Nfd }
-
-impl Default for NormalizationForm {
-    fn default() -> Self { NormalizationForm::Nfc }
+pub enum NormalizationForm {
+    None,
+    #[default]
+    Nfc,
+    Nfd,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum ScriptClass { Hebrew, Greek, Latin, Common, Other }
+pub enum ScriptClass {
+    Hebrew,
+    Greek,
+    Latin,
+    Common,
+    Other,
+}
 
 impl From<Script> for ScriptClass {
     fn from(s: Script) -> Self {
@@ -33,7 +40,13 @@ impl From<Script> for ScriptClass {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ExclusionReason {
-    NonLetter, HebrewNiqqud, GreekDiacritic, WrongScript, Unmapped, Unsupported, FormatControl,
+    NonLetter,
+    HebrewNiqqud,
+    GreekDiacritic,
+    WrongScript,
+    Unmapped,
+    Unsupported,
+    FormatControl,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,14 +73,20 @@ pub struct UnicodeAnalysis {
     pub grapheme_count: usize,
 }
 
-fn is_hebrew_mark(cp: u32) -> bool { (0x0591..=0x05C7).contains(&cp) || cp == 0xFB1E }
-fn is_greek_combining(cp: u32) -> bool { (0x0300..=0x036F).contains(&cp) }
+fn is_hebrew_mark(cp: u32) -> bool {
+    (0x0591..=0x05C7).contains(&cp) || cp == 0xFB1E
+}
+fn is_greek_combining(cp: u32) -> bool {
+    (0x0300..=0x036F).contains(&cp)
+}
 fn is_format_control(cp: u32) -> bool {
     matches!(cp, 0x200B..=0x200F | 0x202A..=0x202E | 0x2060..=0x2064 | 0xFEFF)
 }
 
 pub fn strip_combining_marks(s: &str) -> String {
-    s.nfd().filter(|c| !(0x0300..=0x036F).contains(&(*c as u32))).collect()
+    s.nfd()
+        .filter(|c| !(0x0300..=0x036F).contains(&(*c as u32)))
+        .collect()
 }
 
 pub fn analyze(input: &str, form: NormalizationForm) -> UnicodeAnalysis {
@@ -129,7 +148,9 @@ pub fn analyze_nfc(input: &str) -> UnicodeAnalysis {
 mod tests {
     use super::*;
     #[test]
-    fn policy_version_is_set() { assert_eq!(UNICODE_POLICY_VERSION, "1"); }
+    fn policy_version_is_set() {
+        assert_eq!(UNICODE_POLICY_VERSION, "1");
+    }
     #[test]
     fn herro_scripts() {
         let a = analyze_nfc("herro prease");
