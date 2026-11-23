@@ -112,12 +112,7 @@ pub fn run_mandatory() -> Vec<(String, bool, u32, u32)> {
         let sys = SystemId::from_str(case.system).expect("fixture system id");
         let result: CalculationResult = calculate_nfc(case.input, sys);
         let ok = result.total == case.expected_total;
-        out.push((
-            case.name.to_string(),
-            ok,
-            case.expected_total,
-            result.total,
-        ));
+        out.push((case.name.to_string(), ok, case.expected_total, result.total));
     }
     out
 }

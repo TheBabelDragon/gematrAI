@@ -1,13 +1,23 @@
 //! gematra CLI — native execution of the same calculation engine.
+//!
+//! See `docs/RUST_ENGINE.md` for the batch output schema and safety limits.
 use clap::{Parser, Subcommand};
 use gematra_ciphers::all_system_meta;
+use gematra_cli::{
+    load_batch_items, parse_norm, run_batch, BatchLimits, DEFAULT_MAX_INPUT_BYTES,
+    DEFAULT_MAX_ITEMS, DEFAULT_MAX_TEXT_BYTES,
+};
 use gematra_core::{calculate, calculate_applicable, parse_system, ENGINE_VERSION};
-use gematra_unicode::NormalizationForm;
 use std::io::{self, Read};
+use std::path::PathBuf;
 use std::process;
 
 #[derive(Parser)]
-#[command(name = "gematra", version = ENGINE_VERSION, about = "gematrAI calculation engine (Rust authority)")]
+#[command(
+    name = "gematra",
+    version = ENGINE_VERSION,
+    about = "gematrAI calculation engine (Rust authority)"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -15,21 +25,46 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Calculate one system for a single text
     Calc {
         text: Option<String>,
         #[arg(short, long)]
         system: String,
+        /// Normalization: nfc (default), nfd, or none
         #[arg(long, default_value = "nfc")]
         norm: String,
         #[arg(long)]
         pretty: bool,
     },
+    /// Calculate all applicable systems for a single text
     All {
         text: Option<String>,
+        /// Normalization: nfc (default), nfd, or none
         #[arg(long, default_value = "nfc")]
         norm: String,
         #[arg(long)]
         pretty: bool,
+    },
+    /// Batch calculate many inputs in one process invocation.
+    ///
+    /// Input (stdin or --input file): JSON array or NDJSON.
+    /// Failure is atomic: no partial JSON on stdout.
+    Batch {
+        #[arg(short, long)]
+        input: Option<PathBuf>,
+        /// Normalization: nfc (default), nfd, or none
+        #[arg(long, default_value = "nfc")]
+        norm: String,
+        #[arg(long)]
+        pretty: bool,
+        #[arg(long)]
+        totals_only: bool,
+        #[arg(long, default_value_t = DEFAULT_MAX_INPUT_BYTES)]
+        max_input_bytes: usize,
+        #[arg(long, default_value_t = DEFAULT_MAX_ITEMS)]
+        max_items: usize,
+        #[arg(long, default_value_t = DEFAULT_MAX_TEXT_BYTES)]
+        max_text_bytes: usize,
     },
     Systems {
         #[arg(long)]
@@ -54,18 +89,25 @@ fn read_text(arg: Option<String>) -> String {
     buf
 }
 
-fn parse_norm(s: &str) -> NormalizationForm {
-    match s.to_ascii_lowercase().as_str() {
-        "none" => NormalizationForm::None,
-        "nfd" => NormalizationForm::Nfd,
-        _ => NormalizationForm::Nfc,
+fn require_norm(s: &str) -> gematra_unicode::NormalizationForm {
+    match parse_norm(s) {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("{e}");
+            process::exit(2);
+        }
     }
 }
 
 fn main() {
     let cli = Cli::parse();
     match cli.command {
-        Commands::Calc { text, system, norm, pretty } => {
+        Commands::Calc {
+            text,
+            system,
+            norm,
+            pretty,
+        } => {
             let text = read_text(text);
             let sys = match parse_system(&system) {
                 Ok(s) => s,
@@ -74,13 +116,43 @@ fn main() {
                     process::exit(1);
                 }
             };
-            let result = calculate(&text, sys, parse_norm(&norm));
+            let result = calculate(&text, sys, require_norm(&norm));
             print_json(&result, pretty);
         }
         Commands::All { text, norm, pretty } => {
             let text = read_text(text);
-            let results = calculate_applicable(&text, parse_norm(&norm));
+            let results = calculate_applicable(&text, require_norm(&norm));
             print_json(&results, pretty);
+        }
+        Commands::Batch {
+            input,
+            norm,
+            pretty,
+            totals_only,
+            max_input_bytes,
+            max_items,
+            max_text_bytes,
+        } => {
+            let limits = BatchLimits {
+                max_input_bytes,
+                max_items,
+                max_text_bytes,
+            };
+            let norm = require_norm(&norm);
+            let items = match load_batch_items(input, &limits) {
+                Ok(i) => i,
+                Err(e) => {
+                    eprintln!("batch input error: {e}");
+                    process::exit(2);
+                }
+            };
+            match run_batch(items, norm, totals_only) {
+                Ok(v) => print_json(&v, pretty),
+                Err(e) => {
+                    eprintln!("batch error: {e}");
+                    process::exit(1);
+                }
+            }
         }
         Commands::Systems { pretty } => {
             print_json(&all_system_meta(), pretty);
@@ -109,18 +181,18 @@ fn main() {
         }
         Commands::Version { json } => {
             if json {
-                print_json(
-                    &serde_json::json!({
-                        "engine_version": ENGINE_VERSION,
-                        "cipher_registry_version": gematra_ciphers::CIPHER_REGISTRY_VERSION,
-                        "unicode_policy_version": gematra_unicode::UNICODE_POLICY_VERSION,
-                    }),
-                    true,
-                );
+                print_json(&gematra_cli::engine_metadata(), true);
             } else {
-                println!("engine={}", ENGINE_VERSION);
-                println!("cipher_registry={}", gematra_ciphers::CIPHER_REGISTRY_VERSION);
-                println!("unicode_policy={}", gematra_unicode::UNICODE_POLICY_VERSION);
+                let m = gematra_cli::engine_metadata();
+                println!("engine={}", m["engine_version"].as_str().unwrap_or(""));
+                println!(
+                    "cipher_registry={}",
+                    m["cipher_registry_version"].as_str().unwrap_or("")
+                );
+                println!(
+                    "unicode_policy={}",
+                    m["unicode_policy_version"].as_str().unwrap_or("")
+                );
             }
         }
     }

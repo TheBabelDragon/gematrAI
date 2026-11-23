@@ -7,10 +7,8 @@
 //! - calculate all applicable systems
 //! - character breakdown is embedded in the result JSON
 
-use gematra_ciphers::{all_system_meta, SystemId};
-use gematra_core::{
-    calculate, calculate_applicable, calculate_nfc, parse_system, ENGINE_VERSION,
-};
+use gematra_ciphers::all_system_meta;
+use gematra_core::{calculate, calculate_applicable, calculate_nfc, parse_system, ENGINE_VERSION};
 use gematra_unicode::{NormalizationForm, UNICODE_POLICY_VERSION};
 use wasm_bindgen::prelude::*;
 

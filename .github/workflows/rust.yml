@@ -25,15 +25,24 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
 
-      - name: Test core crates
+      - name: Format check
         working-directory: rust
-        run: cargo test -p gematra-unicode -p gematra-ciphers -p gematra-core -p gematra-fixtures
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        working-directory: rust
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test workspace
+        working-directory: rust
+        run: cargo test --workspace
 
       - name: Build CLI
         working-directory: rust
@@ -42,6 +51,56 @@ jobs:
       - name: Run fixture suite via CLI
         working-directory: rust
         run: ./target/release/gematra fixtures
+
+      - name: Batch smoke (JSON array)
+        working-directory: rust
+        run: |
+          python3 -c 'import json,sys; json.dump([{"id":"t1","text":"שלום","systems":["hebrew-standard"]},{"id":"t2","text":"herro prease","systems":["english-ordinal"]}], sys.stdout)' \
+            | ./target/release/gematra batch --totals-only > /tmp/batch_out.json
+          python3 -c "
+          import json
+          d=json.load(open('/tmp/batch_out.json'))
+          assert d['result_count']==2, d
+          assert d['results'][0]['totals']['hebrew-standard']==376, d
+          assert d['results'][1]['totals']['english-ordinal']==128, d
+          print('json array smoke ok')
+          "
+
+      - name: Batch smoke (NDJSON)
+        working-directory: rust
+        run: |
+          python3 -c '
+          import json,sys
+          for row in [{"id":"1","text":"שלום","systems":["hebrew-standard"]},{"id":"2","text":"abc","systems":["english-ordinal"]}]:
+              print(json.dumps(row, ensure_ascii=False))
+          ' | ./target/release/gematra batch --totals-only > /tmp/ndjson_out.json
+          python3 -c "
+          import json
+          d=json.load(open('/tmp/ndjson_out.json'))
+          assert d['result_count']==2, d
+          assert d['results'][0]['totals']['hebrew-standard']==376, d
+          assert d['results'][1]['totals']['english-ordinal']==6, d
+          print('ndjson smoke ok')
+          "
+
+      - name: Reject invalid normalization
+        working-directory: rust
+        run: |
+          set +e
+          python3 -c 'import json,sys; json.dump([{"text":"a"}], sys.stdout)' \
+            | ./target/release/gematra batch --norm nfkc --totals-only > /tmp/bad_norm_out.txt 2>/tmp/bad_norm_err.txt
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "expected nonzero exit for invalid --norm" >&2
+            exit 1
+          fi
+          if [ -s /tmp/bad_norm_out.txt ]; then
+            echo "expected empty stdout on failure:" >&2
+            cat /tmp/bad_norm_out.txt >&2
+            exit 1
+          fi
+          grep -qi 'invalid normalization' /tmp/bad_norm_err.txt
 
       - name: Build WASM
         working-directory: rust
