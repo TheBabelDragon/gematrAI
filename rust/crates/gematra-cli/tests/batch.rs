@@ -146,10 +146,7 @@ fn hebrew_greek_latin_mixed_and_empty() {
     assert_eq!(out["results"][0]["totals"]["hebrew-standard"], 376);
     assert_eq!(out["results"][0]["totals"]["hebrew-gadol"], 936);
 
-    let payload = format!(
-        "[{}]",
-        item_json(None, "α", Some(vec!["greek-isopsephy"]))
-    );
+    let payload = format!("[{}]", item_json(None, "α", Some(vec!["greek-isopsephy"])));
     let out = run_batch(parse_items(&payload).unwrap(), NormalizationForm::Nfc, true).unwrap();
     assert_eq!(out["results"][0]["totals"]["greek-isopsephy"], 1);
 
@@ -157,10 +154,7 @@ fn hebrew_greek_latin_mixed_and_empty() {
     let out = run_batch(parse_items(&payload).unwrap(), NormalizationForm::Nfc, true).unwrap();
     assert!(!out["results"][0]["totals"].as_object().unwrap().is_empty());
 
-    let payload = format!(
-        "[{}]",
-        item_json(None, "", Some(vec!["english-ordinal"]))
-    );
+    let payload = format!("[{}]", item_json(None, "", Some(vec!["english-ordinal"])));
     let out = run_batch(parse_items(&payload).unwrap(), NormalizationForm::Nfc, true).unwrap();
     assert_eq!(out["results"][0]["totals"]["english-ordinal"], 0);
     assert_eq!(out["results"][0]["original_input"], "");
@@ -201,9 +195,8 @@ fn limit_boundaries() {
     assert!(
         load_batch_items_from_str(&format!("[{}]", item_json(None, "abcde", None)), &lim).is_ok()
     );
-    let err =
-        load_batch_items_from_str(&format!("[{}]", item_json(None, "abcdef", None)), &lim)
-            .unwrap_err();
+    let err = load_batch_items_from_str(&format!("[{}]", item_json(None, "abcdef", None)), &lim)
+        .unwrap_err();
     assert!(err.contains("max_text_bytes"), "{err}");
 }
 
