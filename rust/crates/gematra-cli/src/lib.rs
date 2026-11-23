@@ -251,3 +251,23 @@ pub fn engine_metadata() -> serde_json::Value {
         "unicode_policy_version": gematra_unicode::UNICODE_POLICY_VERSION,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[test]
+    fn parse_norm_strict() {
+        assert!(parse_norm("nfc").is_ok());
+        assert!(parse_norm("nfkc").is_err());
+    }
+
+    #[test]
+    fn read_bounded_limits() {
+        assert!(read_bounded(Cursor::new(vec![b'a'; 5]), 5).is_ok());
+        assert!(read_bounded(Cursor::new(vec![b'a'; 6]), 5).is_err());
+        assert!(read_bounded(Cursor::new(b""), 0).is_ok());
+        assert!(read_bounded(Cursor::new(b"x"), 0).is_err());
+    }
+}
