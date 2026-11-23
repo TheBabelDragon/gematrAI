@@ -1,8 +1,5 @@
 //! gematra CLI — native execution of the same calculation engine.
 //!
-//! Numerical authority for gematrAI. Batch mode is the preferred interface
-//! for corpus builders so values are produced by the same engine as WASM.
-//!
 //! See `docs/RUST_ENGINE.md` for the batch output schema and safety limits.
 use clap::{Parser, Subcommand};
 use gematra_ciphers::all_system_meta;
@@ -33,6 +30,7 @@ enum Commands {
         text: Option<String>,
         #[arg(short, long)]
         system: String,
+        /// Normalization: nfc (default), nfd, or none
         #[arg(long, default_value = "nfc")]
         norm: String,
         #[arg(long)]
@@ -41,6 +39,7 @@ enum Commands {
     /// Calculate all applicable systems for a single text
     All {
         text: Option<String>,
+        /// Normalization: nfc (default), nfd, or none
         #[arg(long, default_value = "nfc")]
         norm: String,
         #[arg(long)]
@@ -48,30 +47,22 @@ enum Commands {
     },
     /// Batch calculate many inputs in one process invocation.
     ///
-    /// Input (stdin or --input file): JSON array of BatchItem, or NDJSON lines.
-    /// Each item: { "id": "...", "text": "...", "systems": ["hebrew-standard"]? }
-    /// If systems omitted or empty, all applicable systems are computed.
-    /// Duplicate system ids are deduplicated (first occurrence order).
-    ///
-    /// Failure is atomic: malformed input or limit breach aborts with no partial results.
+    /// Input (stdin or --input file): JSON array or NDJSON.
+    /// Failure is atomic: no partial JSON on stdout.
     Batch {
-        /// Path to JSON/NDJSON input (default: stdin)
         #[arg(short, long)]
         input: Option<PathBuf>,
+        /// Normalization: nfc (default), nfd, or none
         #[arg(long, default_value = "nfc")]
         norm: String,
         #[arg(long)]
         pretty: bool,
-        /// Emit only totals map per item (smaller corpus-friendly payload)
         #[arg(long)]
         totals_only: bool,
-        /// Maximum input size in bytes (default 33554432 = 32 MiB)
         #[arg(long, default_value_t = DEFAULT_MAX_INPUT_BYTES)]
         max_input_bytes: usize,
-        /// Maximum number of batch items (default 100000)
         #[arg(long, default_value_t = DEFAULT_MAX_ITEMS)]
         max_items: usize,
-        /// Maximum UTF-8 byte length of a single item text (default 8192)
         #[arg(long, default_value_t = DEFAULT_MAX_TEXT_BYTES)]
         max_text_bytes: usize,
     },
@@ -98,6 +89,16 @@ fn read_text(arg: Option<String>) -> String {
     buf
 }
 
+fn require_norm(s: &str) -> gematra_unicode::NormalizationForm {
+    match parse_norm(s) {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!("{e}");
+            process::exit(2);
+        }
+    }
+}
+
 fn main() {
     let cli = Cli::parse();
     match cli.command {
@@ -115,12 +116,12 @@ fn main() {
                     process::exit(1);
                 }
             };
-            let result = calculate(&text, sys, parse_norm(&norm));
+            let result = calculate(&text, sys, require_norm(&norm));
             print_json(&result, pretty);
         }
         Commands::All { text, norm, pretty } => {
             let text = read_text(text);
-            let results = calculate_applicable(&text, parse_norm(&norm));
+            let results = calculate_applicable(&text, require_norm(&norm));
             print_json(&results, pretty);
         }
         Commands::Batch {
@@ -137,6 +138,7 @@ fn main() {
                 max_items,
                 max_text_bytes,
             };
+            let norm = require_norm(&norm);
             let items = match load_batch_items(input, &limits) {
                 Ok(i) => i,
                 Err(e) => {
@@ -144,7 +146,7 @@ fn main() {
                     process::exit(2);
                 }
             };
-            match run_batch(items, parse_norm(&norm), totals_only) {
+            match run_batch(items, norm, totals_only) {
                 Ok(v) => print_json(&v, pretty),
                 Err(e) => {
                     eprintln!("batch error: {e}");
