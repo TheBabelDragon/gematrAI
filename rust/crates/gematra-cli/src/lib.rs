@@ -1,5 +1,7 @@
-//! Batch calculation library surface for the gematra CLI.
-//! Used by the binary and by unit tests.
+//! Batch calculation library for the gematra CLI.
+//!
+//! Numerical authority remains in `gematra-core` / ciphers / unicode.
+//! This crate only batches calls and enforces safety limits.
 use gematra_ciphers::SystemId;
 use gematra_core::{
     calculate, calculate_applicable, parse_system, CalculationResult, ENGINE_VERSION,
@@ -7,6 +9,7 @@ use gematra_core::{
 use gematra_unicode::{analyze, NormalizationForm};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::fs::File;
 use std::io::{self, Read};
 use std::path::PathBuf;
 
@@ -15,7 +18,7 @@ pub const DEFAULT_MAX_INPUT_BYTES: usize = 32 * 1024 * 1024;
 pub const DEFAULT_MAX_ITEMS: usize = 100_000;
 pub const DEFAULT_MAX_TEXT_BYTES: usize = 8_192;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct BatchItem {
     #[serde(default)]
     pub id: Option<String>,
@@ -28,11 +31,13 @@ pub struct BatchItem {
 pub struct BatchResult {
     pub id: Option<String>,
     pub original_input: String,
-    /// NFC form via the same unicode engine used by calculations.
+    /// Form produced by `gematra-unicode::analyze` under the chosen policy.
+    /// Not a second normalizer.
     pub normalized_form: String,
     pub totals: serde_json::Map<String, serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub calculations: Option<Vec<CalculationResult>>,
+    /// Sum of `unsupported.len()` across calculated systems for this item.
     pub unsupported_count: usize,
 }
 
@@ -53,24 +58,45 @@ impl Default for BatchLimits {
     }
 }
 
-pub fn parse_norm(s: &str) -> NormalizationForm {
+/// Strict normalization parser. Accepts only `nfc`, `nfd`, `none` (case-insensitive).
+/// Invalid values return `Err` — never silently fall back to NFC.
+pub fn parse_norm(s: &str) -> Result<NormalizationForm, String> {
     match s.to_ascii_lowercase().as_str() {
-        "none" => NormalizationForm::None,
-        "nfd" => NormalizationForm::Nfd,
-        _ => NormalizationForm::Nfc,
+        "nfc" => Ok(NormalizationForm::Nfc),
+        "nfd" => Ok(NormalizationForm::Nfd),
+        "none" => Ok(NormalizationForm::None),
+        other => Err(format!(
+            "invalid normalization '{other}': expected nfc, nfd, or none"
+        )),
     }
 }
 
-/// Load and validate batch items. Atomic: any error rejects the entire batch.
+/// Read at most `max + 1` bytes from `reader`. If more than `max` bytes are
+/// available, reject without keeping the excess in the returned buffer.
+fn read_bounded<R: Read>(reader: R, max: usize) -> Result<Vec<u8>, String> {
+    let limit = max.saturating_add(1);
+    let mut buf = Vec::new();
+    let mut take = reader.take(limit as u64);
+    take.read_to_end(&mut buf)
+        .map_err(|e| format!("read input: {e}"))?;
+    if buf.len() > max {
+        return Err(format!(
+            "input exceeds max_input_bytes (more than {max} bytes)"
+        ));
+    }
+    Ok(buf)
+}
+
+/// Load batch items from an owned UTF-8 string already size-checked.
 pub fn load_batch_items_from_str(
     text: &str,
     limits: &BatchLimits,
 ) -> Result<Vec<BatchItem>, String> {
-    let raw_len = text.len();
-    if raw_len > limits.max_input_bytes {
+    if text.len() > limits.max_input_bytes {
         return Err(format!(
             "input exceeds max_input_bytes ({} > {})",
-            raw_len, limits.max_input_bytes
+            text.len(),
+            limits.max_input_bytes
         ));
     }
     let trimmed = text.trim();
@@ -114,11 +140,13 @@ pub fn load_batch_items_from_str(
     }
 
     for (i, item) in items.iter().enumerate() {
-        let text_bytes = item.text.len();
-        if text_bytes > limits.max_text_bytes {
+        if item.text.len() > limits.max_text_bytes {
             return Err(format!(
                 "item[{}] id={:?} text exceeds max_text_bytes ({} > {})",
-                i, item.id, text_bytes, limits.max_text_bytes
+                i,
+                item.id,
+                item.text.len(),
+                limits.max_text_bytes
             ));
         }
     }
@@ -126,33 +154,23 @@ pub fn load_batch_items_from_str(
     Ok(items)
 }
 
+/// Bounded load from path or stdin. Never buffers more than `max_input_bytes + 1`.
 pub fn load_batch_items(
     path: Option<PathBuf>,
     limits: &BatchLimits,
 ) -> Result<Vec<BatchItem>, String> {
     let raw = if let Some(p) = path {
-        std::fs::read(&p).map_err(|e| format!("read {}: {}", p.display(), e))?
+        let file = File::open(&p).map_err(|e| format!("open {}: {e}", p.display()))?;
+        read_bounded(file, limits.max_input_bytes)?
     } else {
-        let mut buf = Vec::new();
-        io::stdin()
-            .read_to_end(&mut buf)
-            .map_err(|e| format!("read stdin: {e}"))?;
-        buf
+        read_bounded(io::stdin(), limits.max_input_bytes)?
     };
-
-    if raw.len() > limits.max_input_bytes {
-        return Err(format!(
-            "input exceeds max_input_bytes ({} > {})",
-            raw.len(),
-            limits.max_input_bytes
-        ));
-    }
 
     let text = String::from_utf8(raw).map_err(|e| format!("input is not valid UTF-8: {e}"))?;
     load_batch_items_from_str(&text, limits)
 }
 
-/// Resolve systems: empty/None => applicable; otherwise parse & dedupe preserving order.
+/// Resolve systems: empty/None => applicable at run time; else parse & dedupe (order preserved).
 pub fn resolve_systems(item: &BatchItem) -> Result<Vec<SystemId>, String> {
     match &item.systems {
         None => Ok(vec![]),
@@ -172,7 +190,7 @@ pub fn resolve_systems(item: &BatchItem) -> Result<Vec<SystemId>, String> {
     }
 }
 
-/// NFC form via the same unicode engine used by calculations (no second normalizer).
+/// Form from `gematra-unicode::analyze` (same engine path as calculations).
 pub fn normalized_form_for(text: &str, norm: NormalizationForm) -> String {
     let analysis = analyze(text, norm);
     if analysis.characters.is_empty() {
@@ -205,7 +223,7 @@ pub fn run_batch(
         let mut unsupported_count = 0usize;
         for c in &calcs {
             totals.insert(c.system_id.clone(), serde_json::json!(c.total));
-            unsupported_count += c.unsupported.len();
+            unsupported_count = unsupported_count.saturating_add(c.unsupported.len());
         }
         let normalized_form = normalized_form_for(&item.text, norm);
         results.push(BatchResult {
