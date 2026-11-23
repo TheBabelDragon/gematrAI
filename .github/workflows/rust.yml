@@ -25,15 +25,24 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
 
-      - name: Test core crates
+      - name: Format check
         working-directory: rust
-        run: cargo test -p gematra-unicode -p gematra-ciphers -p gematra-core -p gematra-fixtures
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        working-directory: rust
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Test workspace
+        working-directory: rust
+        run: cargo test --workspace
 
       - name: Build CLI
         working-directory: rust
@@ -42,6 +51,21 @@ jobs:
       - name: Run fixture suite via CLI
         working-directory: rust
         run: ./target/release/gematra fixtures
+
+      - name: Batch smoke (JSON array)
+        working-directory: rust
+        run: |
+          echo '[{"id":"t1","text":"שלום","systems":["hebrew-standard"]},{"id":"t2","text":"herro prease","systems":["english-ordinal"]}]' \
+            | ./target/release/gematra batch --totals-only \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['result_count']==2; assert d['results'][0]['totals']['hebrew-standard']==376; assert d['results'][1]['totals']['english-ordinal']==128"
+
+      - name: Reject invalid normalization
+        working-directory: rust
+        run: |
+          if echo '[{"text":"a"}]' | ./target/release/gematra batch --norm nfkc --totals-only; then
+            echo "expected nonzero exit for invalid --norm" >&2
+            exit 1
+          fi
 
       - name: Build WASM
         working-directory: rust
