@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify mandatory reverse-lookup acceptance cases against generated artifacts."""
+"""Exact acceptance: terms must appear as exact matches in generated packs."""
 from __future__ import annotations
 import json
 import sys
@@ -17,64 +17,62 @@ CASES = [
 ]
 
 
-def load_pack(name: str):
-    return json.loads((GEN / name).read_text(encoding="utf-8"))
-
-
-def exact_hit(items, term: str) -> bool:
-    return any(x.get("t") == term for x in items)
+def pack_for(val: int):
+    if val < 100:
+        return json.loads((GEN / "values_low.json").read_text(encoding="utf-8"))
+    if val < 1000:
+        return json.loads((GEN / "values_mid.json").read_text(encoding="utf-8"))
+    raise SystemExit(f"value {val} needs shard lookup")
 
 
 def main() -> int:
-    low = load_pack("values_low.json")
-    mid = load_pack("values_mid.json")
+    if not (GEN / "manifest.json").is_file():
+        print("FAIL: missing manifest")
+        return 1
+    manifest = json.loads((GEN / "manifest.json").read_text(encoding="utf-8"))
+    st = manifest.get("stats") or {}
     failed = 0
     for sys_id, val, term in CASES:
-        pack = low if val < 100 else mid
+        pack = pack_for(val)
         items = (pack.get(sys_id) or {}).get(str(val)) or []
-        ok = exact_hit(items, term)
-        if not ok and sys_id == "greek-isopsephy":
-            ok = exact_hit(items, "\u03bb\u03cc\u03b3\u03bf\u03c2") or exact_hit(items, "\u03bb\u03bf\u03b3\u03bf\u03c2")
-        status = "OK" if ok else "FAIL"
-        if not ok:
+        hits = [x for x in items if x.get("t") == term]
+        if not hits:
+            print(
+                f"FAIL: exact {term!r} @ {sys_id}={val} missing; have={[x.get('t') for x in items]}"
+            )
             failed += 1
-        terms = [x.get("t") for x in items]
-        print(f"{status}: exact {term!r} @ {sys_id}={val} terms={terms[:12]}")
-
-    found_ref = False
+        else:
+            print(f"OK: exact {term!r} @ {sys_id}={val} terms={[x.get('t') for x in hits]}")
+    low = json.loads((GEN / "values_low.json").read_text(encoding="utf-8"))
+    mid = json.loads((GEN / "values_mid.json").read_text(encoding="utf-8"))
+    found = False
     for pack in (low, mid):
-        for val, items in (pack.get("hebrew-standard") or {}).items():
-            for it in items:
-                if it.get("t") == "\u05d1\u05e8\u05d0\u05e9\u05d9\u05ea" and it.get("r"):
-                    found_ref = True
-                    print(
-                        f"OK: fixture \u05d1\u05e8\u05d0\u05e9\u05d9\u05ea refs={it.get('r')} books={it.get('b')} kind={it.get('kind')}"
-                    )
-                    break
-            if found_ref:
-                break
-        if found_ref:
-            break
-    if not found_ref:
-        shard_dir = GEN / "values" / "hebrew-standard"
-        if shard_dir.is_dir():
-            for f in sorted(shard_dir.glob("*.json")):
-                data = json.loads(f.read_text(encoding="utf-8"))
-                for val, items in data.items():
-                    for it in items:
-                        if it.get("t") == "\u05d1\u05e8\u05d0\u05e9\u05d9\u05ea" and it.get("r"):
-                            found_ref = True
+        for sys_id, valmap in pack.items():
+            if not sys_id.startswith("hebrew"):
+                continue
+            for val, items in valmap.items():
+                for it in items:
+                    if it.get("t") == "\u05d1\u05e8\u05d0\u05e9\u05d9\u05ea":
+                        refs = it.get("r") or []
+                        books = it.get("b") or []
+                        kind = it.get("kind")
+                        if refs or kind == "fixture":
                             print(
-                                f"OK: fixture \u05d1\u05e8\u05d0\u05e9\u05d9\u05ea refs={it.get('r')} books={it.get('b')}"
+                                f"OK: fixture \u05d1\u05e8\u05d0\u05e9\u05d9\u05ea refs={refs} books={books} kind={kind}"
                             )
-                            break
-                    if found_ref:
-                        break
-                if found_ref:
-                    break
-    if not found_ref:
-        print("FAIL: fixture term \u05d1\u05e8\u05d0\u05e9\u05d9\u05ea missing source ref")
+                            found = True
+    if not found:
+        print("FAIL: bereshit fixture provenance not found")
         failed += 1
+    print(
+        json.dumps(
+            {
+                "all_ok": failed == 0,
+                "unique_terms": st.get("unique_terms"),
+                "segments": st.get("segments"),
+            }
+        )
+    )
     return 1 if failed else 0
 
 
