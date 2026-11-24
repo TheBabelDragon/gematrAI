@@ -69,7 +69,11 @@ async function fetchShard(systemId,value){if(!towerManifest)towerManifest=defaul
   const url=(towerManifest.valuesBase||'./corpus/generated/values/')+systemId+'/'+b+'.json';
   try{const res=await fetch(url,{cache:'force-cache'});if(!res.ok){shardCache.set(key,{});return[];}const payload=await res.json();shardCache.set(key,payload);return sortTerms((payload[String(value)]||payload[value])||[]);}catch(e){shardCache.set(key,{});return[];}}
 
-function getSeedMatches(systemId,value){if(!window.__gematra||!window.__gematra.engineOkFlag||!getSystem(systemId))return[];return CORPUS.map(e=>{let total=0;try{total=calculateOne(e.term,systemId).total;}catch(_){total=-1;}return{term:e.term,language:e.language,notes:e.notes,total,c:1,source:'seed'};}).filter(e=>e.total===value).sort((a,b)=>a.term.localeCompare(b.term));}
+function getSeedMatches(systemId,value){
+  // Seed terms are indexed into the Rust-built tower packs.
+  // Do not recompute gematria in JavaScript.
+  return [];
+}
 
 function systemInCorpus(sid){
   if(HEBREW_SYS.includes(sid)||SEED_SYS.includes(sid))return true;
@@ -88,7 +92,12 @@ function runCalculation(text,opts={}){currentText=text;charCountEl.textContent=[
 
 function renderResults(){if(!currentResults.length){resultsEl.innerHTML='<div class="empty-state">No applicable systems</div>';return;}resultsEl.innerHTML=currentResults.map(({system,result})=>{const expanded=system.id===primarySystemId?'expanded':'';const bd=result.breakdown.map(b=>'<span class="bd-item"><span class="bd-char '+scriptClass(b.char)+'">'+esc(b.char)+'</span><span class="bd-val '+(b.value===null?'null':'')+'">'+(b.value===null?'—':b.value)+'</span></span>').join('');return'<div class="result-card '+expanded+'" data-sys="'+system.id+'"><div class="result-header" data-toggle="'+system.id+'"><div class="result-sys">'+esc(system.name)+'</div><div class="result-total">'+result.total+'</div><div class="result-actions"><button class="btn-icon" data-copy="'+system.id+'" title="Copy total" aria-label="Copy total">C</button><button class="btn-icon" data-expand="'+system.id+'" aria-label="Expand">'+(expanded?'v':'>')+'</button></div></div><div class="result-body"><div class="breakdown">'+bd+'</div><p style="margin-top:0.6rem;font-family:var(--mono);font-size:0.65rem;color:var(--text-dim)">'+esc(system.description)+'</p></div></div>';}).join('');resultsEl.querySelectorAll('[data-toggle]').forEach(el=>el.addEventListener('click',e=>{if(e.target.closest('[data-copy]'))return;primarySystemId=el.dataset.toggle;resultsEl.querySelectorAll('.result-card').forEach(c=>{const is=c.dataset.sys===primarySystemId;c.classList.toggle('expanded',is);const btn=c.querySelector('[data-expand]');if(btn)btn.textContent=is?'v':'>';});renderEquivalenceExplorer();renderAI();encodeState();}));resultsEl.querySelectorAll('[data-copy]').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const r=currentResults.find(x=>x.system.id===btn.dataset.copy);if(r){copyText(String(r.result.total));btn.textContent='OK';setTimeout(()=>btn.textContent='C',900);}}));}
 
-async function collectTerms(sid,val,inputNorm){let tower=[];if(systemInCorpus(sid))tower=await fetchShard(sid,val);tower=tower.filter(h=>!sameTerm(h.s||h.t,inputNorm)&&!sameTerm(h.t,inputNorm));const seed=getSeedMatches(sid,val).filter(m=>!sameTerm(m.term,inputNorm));const seen=new Set(tower.map(h=>(h.s||h.t||'').trim()));return[...tower.map(h=>({surface:h.s||h.t,c:h.c||0,r:h.r||[],b:h.b||[],source:'tower'})),...seed.filter(m=>!seen.has(m.term.trim())).map(m=>({surface:m.term,c:1,r:[],b:[],source:'seed',notes:m.notes}))];}
+async function collectTerms(sid,val,inputNorm){
+  let tower=[];
+  if(systemInCorpus(sid))tower=await fetchShard(sid,val);
+  tower=tower.filter(h=>!sameTerm(h.s||h.t,inputNorm)&&!sameTerm(h.t,inputNorm));
+  return tower.map(h=>({surface:h.s||h.t,c:h.c||0,r:h.r||[],b:h.b||[],source:(h.kind==='seed'?'seed':'tower'),notes:''}));
+}
 
 async function renderEquivalenceExplorer(){if(!currentText.trim()||!currentResults.length){equivPanel.style.display='none';if(corpusMatchesPanel)corpusMatchesPanel.style.display='none';return;}equivPanel.style.display='block';const inputNorm=norm(currentText);const systemsToShow=currentResults.map(r=>r.system.id).filter((id,i,a)=>a.indexOf(id)===i).sort((a,b)=>(UI_SYS_ORDER.indexOf(a)<0?99:UI_SYS_ORDER.indexOf(a))-(UI_SYS_ORDER.indexOf(b)<0?99:UI_SYS_ORDER.indexOf(b)));let html='';const primary=currentResults.find(r=>r.system.id===primarySystemId)||currentResults[0];for(const sid of systemsToShow){const row=currentResults.find(r=>r.system.id===sid);if(!row)continue;const val=row.result.total,label=row.system.name,isPrimary=sid===primarySystemId;const allTerms=await collectTerms(sid,val,inputNorm);const totalOcc=allTerms.reduce((s,t)=>s+(t.c||0),0);const shown=allTerms.slice(0,INITIAL_TERMS);const rest=allTerms.length-shown.length;html+='<div class="eq-sys'+(isPrimary?' eq-sys-primary':'')+'" data-eq-sys="'+sid+'"><div class="eq-sys-head"><span class="eq-sys-name">'+esc(label)+'</span><span class="eq-sys-val">'+val+'</span></div><div class="eq-sys-meta">'+allTerms.length+' unique term'+(allTerms.length===1?'':'s')+(totalOcc>allTerms.length?' · '+totalOcc+' occurrences':'')+' · sorted by frequency, then lexical</div>';if(!allTerms.length)html+='<div class="eq-empty">No other corpus terms with this value</div>';else{html+='<div class="eq-term-grid">'+shown.map(t=>'<button type="button" class="eq-term" data-term="'+esc(t.surface)+'" data-sys="'+sid+'" dir="'+termDir(t.surface)+'"><span class="eq-term-word">'+esc(t.surface)+'</span><span class="eq-term-meta">'+val+(t.c>1?' · '+t.c+' occ':'')+(t.source==='seed'?' · seed':'')+'</span></button>').join('')+'</div>';if(rest>0)html+='<button type="button" class="eq-show-all" data-sys="'+sid+'" data-val="'+val+'">Show all '+allTerms.length+' terms</button><div class="eq-full-list" data-full-sys="'+sid+'" style="display:none"></div>';}html+='</div>';}equivList.innerHTML=html||'<span class="eq-empty">No systems applicable</span>';equivList.querySelectorAll('.eq-term').forEach(btn=>btn.addEventListener('click',()=>loadTerm(btn.dataset.term,btn.dataset.sys)));equivList.querySelectorAll('.eq-show-all').forEach(btn=>btn.addEventListener('click',async()=>{const sid=btn.dataset.sys,val=+btn.dataset.val;const all=await collectTerms(sid,val,norm(currentText));const host=equivList.querySelector('[data-full-sys="'+sid+'"]');if(!host)return;host.style.display='block';host.innerHTML='<div class="eq-term-grid">'+all.map(t=>'<button type="button" class="eq-term" data-term="'+esc(t.surface)+'" data-sys="'+sid+'" dir="'+termDir(t.surface)+'"><span class="eq-term-word">'+esc(t.surface)+'</span><span class="eq-term-meta">'+val+(t.c>1?' · '+t.c+' occ':'')+'</span></button>').join('')+'</div>';host.querySelectorAll('.eq-term').forEach(b=>b.addEventListener('click',()=>loadTerm(b.dataset.term,b.dataset.sys)));btn.style.display='none';}));if(corpusMatchesPanel){const sid=primary.system.id,val=primary.result.total;if(HEBREW_SYS.includes(sid)&&towerManifest){const others=await collectTerms(sid,val,inputNorm);corpusMatchesPanel.style.display='block';const occ=others.reduce((s,h)=>s+(h.c||0),0);const works=new Set();others.forEach(h=>(h.b||[]).forEach(b=>works.add(b)));corpusMatchesSummary.textContent=primary.system.short+' · '+val+' · '+others.length+' unique terms · '+occ+' occurrences · '+works.size+' works';corpusMatchesList.innerHTML=others.length?others.slice(0,30).map(h=>'<div class="match-item" data-term="'+esc(h.surface)+'"><div class="match-term" dir="rtl">'+esc(h.surface)+'</div><div class="match-meta">'+(h.c||0)+' occ · '+esc((h.b||[]).slice(0,3).join(', '))+'</div>'+((h.r&&h.r[0])?'<div class="match-refs">'+esc(h.r.slice(0,3).join(', '))+'</div>':'')+'</div>').join(''):'<div class="empty-state">No other tower terms</div>';corpusMatchesList.querySelectorAll('[data-term]').forEach(el=>el.addEventListener('click',()=>loadTerm(el.dataset.term,sid)));}else corpusMatchesPanel.style.display='none';}}
 
@@ -96,7 +105,49 @@ async function renderAI(){if(!currentText.trim()||!currentResults.length){aiCont
 
 function populateReverseSystems(){reverseSystem.innerHTML=SYSTEMS.map(s=>'<option value="'+s.id+'">'+esc(s.short)+' — '+esc(s.name)+'</option>').join('');}
 
-async function runReverseLookup(){const val=parseInt(reverseValue.value,10),sysId=reverseSystem.value;if(isNaN(val)||val<0){matchList.innerHTML='<div class="empty-state">Enter a non-negative integer</div>';return;}matchList.innerHTML='<div class="empty-state">Searching…</div>';try{let towerHits=[];if(systemInCorpus(sysId))towerHits=await fetchShard(sysId,val);const seed=getSeedMatches(sysId,val);if(!towerHits.length&&!seed.length){matchList.innerHTML='<div class="empty-state">No corpus matches for '+val+'</div>';return;}let html='';if(towerHits.length){const occ=towerHits.reduce((s,h)=>s+(h.c||0),0);html+='<div class="sys-block-meta">'+towerHits.length+' unique · '+occ+' occ · tower</div>';html+=towerHits.slice(0,40).map(h=>{const surface=h.s||h.t;return'<div class="match-item" data-term="'+esc(surface)+'" data-sys="'+sysId+'"><div class="match-term" dir="'+termDir(surface)+'">'+esc(surface)+'</div><div class="match-meta">'+(h.c||0)+' occ · '+esc((h.b||[]).slice(0,3).join(', '))+'</div>'+((h.r&&h.r[0])?'<div class="match-refs">'+esc(h.r.slice(0,3).join(', '))+'</div>':'')+'</div>';}).join('');}if(seed.length){html+='<div class="sys-block-meta">Seed · '+seed.length+'</div>';html+=seed.map(m=>'<div class="match-item" data-term="'+esc(m.term)+'" data-sys="'+sysId+'"><div class="match-term" dir="'+termDir(m.term)+'">'+esc(m.term)+'</div><div class="match-meta">seed · '+esc(m.language||'')+'</div></div>').join('');}matchList.innerHTML=html;matchList.querySelectorAll('[data-term]').forEach(el=>el.addEventListener('click',()=>loadTerm(el.dataset.term,el.dataset.sys||sysId)));}catch(err){matchList.innerHTML='<div class="empty-state">Lookup failed — try again</div>';console.error('reverse lookup',err);}}
+async function runReverseLookup(){
+  const val=parseInt(reverseValue.value,10),sysId=reverseSystem.value;
+  if(isNaN(val)||val<0){matchList.innerHTML='<div class="empty-state">Enter a non-negative integer</div>';return;}
+  matchList.innerHTML='<div class="empty-state">Searching…</div>';
+  try{
+    if(!towerManifest){await loadTowerManifest();}
+    if(!systemInCorpus(sysId)){
+      matchList.innerHTML='<div class="empty-state">Requested system unavailable in corpus</div>';
+      return;
+    }
+    let towerHits=[];
+    try{
+      towerHits=await fetchShard(sysId,val);
+    }catch(fetchErr){
+      matchList.innerHTML='<div class="empty-state">Fetch failure — corpus shard unavailable</div>';
+      console.error('reverse lookup fetch',fetchErr);
+      return;
+    }
+    if(!towerHits||!towerHits.length){
+      matchList.innerHTML='<div class="empty-state">No indexed matches for '+val+' under '+esc(sysId)+'</div>';
+      return;
+    }
+    const occ=towerHits.reduce((s,h)=>s+(h.c||0),0);
+    const seedN=towerHits.filter(h=>(h.kind||'')==='seed').length;
+    const textN=towerHits.length-seedN;
+    let html='<div class="sys-block-meta">'+towerHits.length+' unique · '+occ+' occ'+(seedN?' · '+seedN+' seed':'')+(textN?' · '+textN+' source':'')+'</div>';
+    html+=towerHits.slice(0,60).map(h=>{
+      const surface=h.s||h.t;
+      const kind=h.kind||'';
+      const metaParts=[(h.c||0)+' occ'];
+      if((h.b||[]).length)metaParts.push(esc((h.b||[]).slice(0,3).join(', ')));
+      if(kind==='seed')metaParts.push('seed');
+      else if(kind)metaParts.push(kind);
+      return '<div class="match-item" data-term="'+esc(surface)+'" data-sys="'+sysId+'"><div class="match-term" dir="'+termDir(surface)+'">'+esc(surface)+'</div><div class="match-meta">'+metaParts.join(' · ')+'</div>'+((h.r&&h.r[0])?'<div class="match-refs">'+esc(h.r.slice(0,3).join(', '))+'</div>':'')+'</div>';
+    }).join('');
+    matchList.innerHTML=html;
+    matchList.querySelectorAll('[data-term]').forEach(el=>el.addEventListener('click',()=>loadTerm(el.dataset.term,el.dataset.sys||sysId)));
+  }catch(err){
+    matchList.innerHTML='<div class="empty-state">Lookup failed — try again</div>';
+    console.error('reverse lookup',err);
+  }
+}
 
 function init(){populateReverseSystems();loadTowerManifest();let debounce;queryInput.addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(()=>{const t=queryInput.value;exploreHistory=t.trim()?[norm(t)]:[];runCalculation(t,{fromHistory:true});},80);});reverseBtn.addEventListener('click',runReverseLookup);reverseValue.addEventListener('keydown',e=>{if(e.key==='Enter')runReverseLookup();});document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();queryInput.focus();queryInput.select();}});restoreState();if(!queryInput.value)resultsEl.innerHTML='<div class="empty-state">Enter Latin, Hebrew, or Greek text</div>';}
-init();
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
