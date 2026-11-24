@@ -10,10 +10,7 @@
   "midValuesUrl": "./corpus/generated/values_mid.json",
   "name": "gematrAI Corpus Tower",
   "phrasesBase": "./corpus/generated/phrases/",
-  "source_inventory": [
-    "fixture",
-    "seed"
-  ],
+  "source_inventory": ["fixture", "seed"],
   "stats": {
     "indexed_term_slots": 67,
     "indexed_values": {
@@ -25,10 +22,11 @@
       "hebrew-katan": 10,
       "hebrew-standard": 19
     },
+    "multi_kind_terms": 10,
     "n_books": 3,
     "phrases": 36,
-    "seed_term_slots": 27,
-    "seed_terms": 27,
+    "seed_term_slots": 37,
+    "seed_terms": 37,
     "segments": 18,
     "source_terms": 40,
     "terms_per_system": {
