@@ -7,6 +7,7 @@ members = [
     "crates/gematra-wasm",
     "crates/gematra-cli",
     "crates/gematra-fixtures",
+    "crates/gematra-corpus",
 ]
 
 [workspace.package]
