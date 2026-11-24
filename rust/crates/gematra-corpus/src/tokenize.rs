@@ -127,15 +127,23 @@ pub fn tokenize(text: &str, language: &str) -> Vec<(String, String)> {
         };
         let is_boundary = matches!(
             ch,
-            ' ' | '\t' | '\n' | '\r' | '\u{05BE}' | '-' | '\u{2010}' | '\u{2011}' | '\u{2012}' | '\u{2013}' | '\u{2014}'
+            ' ' | '\t'
+                | '\n'
+                | '\r'
+                | '\u{05BE}'
+                | '-'
+                | '\u{2010}'
+                | '\u{2011}'
+                | '\u{2012}'
+                | '\u{2013}'
+                | '\u{2014}'
         ) || (ch.is_ascii_punctuation() && ch != '\'');
 
         if is_letter && !is_boundary {
             current_surface.push(ch);
             current_letters.push(ch);
-        } else if is_boundary || ch.is_whitespace() {
-            push_current(&mut current_surface, &mut current_letters, &mut tokens);
         } else {
+            // boundary, whitespace, or other punctuation
             push_current(&mut current_surface, &mut current_letters, &mut tokens);
         }
     }
