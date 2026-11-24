@@ -1,5 +1,4 @@
 //! Full corpus build: process segments, write shards and manifest.
-use gematra_ciphers;
 use gematra_core::ENGINE_VERSION;
 use gematra_unicode::UNICODE_POLICY_VERSION;
 use std::collections::{BTreeMap, BTreeSet};

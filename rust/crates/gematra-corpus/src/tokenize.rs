@@ -56,8 +56,13 @@ pub fn canonical_form(text: &str, language: &str) -> String {
                 }
                 "greek" => {
                     if is_greek_letter(ch) {
-                        for c in ch.to_lowercase() {
-                            out.push(c);
+                        // NFD + strip combining so ό → ο for lookup identity
+                        let lower: String = ch.to_lowercase().collect();
+                        let base = gematra_unicode::strip_combining_marks(&lower);
+                        for c in base.chars() {
+                            if is_greek_letter(c) {
+                                out.push(c);
+                            }
                         }
                     }
                 }
@@ -65,8 +70,12 @@ pub fn canonical_form(text: &str, language: &str) -> String {
                     if is_hebrew_letter(ch) {
                         out.push(ch);
                     } else if is_greek_letter(ch) {
-                        for c in ch.to_lowercase() {
-                            out.push(c);
+                        let lower: String = ch.to_lowercase().collect();
+                        let base = gematra_unicode::strip_combining_marks(&lower);
+                        for c in base.chars() {
+                            if is_greek_letter(c) {
+                                out.push(c);
+                            }
                         }
                     } else if ch.is_ascii_alphabetic() {
                         out.push(ch.to_ascii_lowercase());
@@ -84,23 +93,24 @@ pub fn tokenize(text: &str, language: &str) -> Vec<(String, String)> {
     let mut current_surface = String::new();
     let mut current_letters = String::new();
 
-    let push_current = |surf: &mut String, letters: &mut String, out: &mut Vec<(String, String)>| {
-        if letters.is_empty() {
+    let push_current =
+        |surf: &mut String, letters: &mut String, out: &mut Vec<(String, String)>| {
+            if letters.is_empty() {
+                surf.clear();
+                return;
+            }
+            let norm = canonical_form(letters, language);
+            if !norm.is_empty() {
+                let surface = if surf.is_empty() {
+                    letters.clone()
+                } else {
+                    surf.clone()
+                };
+                out.push((surface, norm));
+            }
             surf.clear();
-            return;
-        }
-        let norm = canonical_form(letters, language);
-        if !norm.is_empty() {
-            let surface = if surf.is_empty() {
-                letters.clone()
-            } else {
-                surf.clone()
-            };
-            out.push((surface, norm));
-        }
-        surf.clear();
-        letters.clear();
-    };
+            letters.clear();
+        };
 
     for ch in text.chars() {
         let is_letter = match language {
