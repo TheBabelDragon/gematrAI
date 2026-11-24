@@ -51,7 +51,7 @@ pub fn build_corpus(
                 refs: Vec::new(),
                 books: BTreeSet::new(),
                 license: row.license.clone(),
-                kind: row.kind.clone(),
+                kinds: BTreeSet::new(),
             });
         entry.count += 1;
         if !row.book.is_empty() {
@@ -63,8 +63,14 @@ pub fn build_corpus(
         {
             entry.refs.push(row.r#ref.clone());
         }
-        if row.kind == "text" || row.kind == "fixture" {
-            entry.kind = row.kind.clone();
+        if !row.kind.is_empty() {
+            entry.kinds.insert(row.kind.clone());
+        }
+        if row.kind != "seed" && !row.surface.is_empty() {
+            entry.surface = row.surface.clone();
+        }
+        if entry.license.is_empty() && !row.license.is_empty() {
+            entry.license = row.license.clone();
         }
     }
 
@@ -103,9 +109,10 @@ pub fn build_corpus(
                 unique_terms.insert((sys.clone(), norm.clone()));
                 total_occ += agg.count as u64;
                 tcount += 1;
-                if agg.kind == "seed" {
+                if agg.kinds.contains("seed") {
                     seed_slots.insert((sys.clone(), norm.clone()));
-                } else {
+                }
+                if agg.kinds.iter().any(|k| k == "fixture" || k == "text") {
                     text_slots.insert((sys.clone(), norm.clone()));
                 }
                 let item = IndexItem {
@@ -115,7 +122,8 @@ pub fn build_corpus(
                     r: agg.refs.clone(),
                     b: agg.books.iter().cloned().collect(),
                     lic: agg.license.clone(),
-                    kind: agg.kind.clone(),
+                    kind: agg.primary_kind(),
+                    kinds: agg.kinds.iter().cloned().collect(),
                 };
                 items.push(item.clone());
                 if val < 100 {
@@ -198,6 +206,16 @@ pub fn build_corpus(
     )
     .map_err(|e| e.to_string())?;
 
+    let mut multi_kind_terms = 0u32;
+    for valmap in by_sys_val.values() {
+        for terms in valmap.values() {
+            for agg in terms.values() {
+                if agg.kinds.len() > 1 {
+                    multi_kind_terms += 1;
+                }
+            }
+        }
+    }
     let book_list: Vec<String> = books.into_iter().filter(|b| !b.is_empty()).collect();
     let stats = serde_json::json!({
         "unique_terms": unique_terms.len(),
@@ -212,6 +230,7 @@ pub fn build_corpus(
         "text_term_slots": text_slots.len(),
         "source_terms": text_slots.len(),
         "seed_terms": seed_slots.len(),
+        "multi_kind_terms": multi_kind_terms,
     });
 
     let manifest = serde_json::json!({
@@ -258,6 +277,7 @@ pub fn build_corpus(
             "books": book_list,
             "seed_term_slots": seed_slots.len(),
             "text_term_slots": text_slots.len(),
+            "multi_kind_terms": multi_kind_terms,
         },
         "disclaimer": manifest["disclaimer"],
     });
