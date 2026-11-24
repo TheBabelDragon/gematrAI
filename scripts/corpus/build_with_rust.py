@@ -14,6 +14,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -76,9 +77,21 @@ def main() -> int:
         raise SystemExit(f"seed lexicon missing: {args.seed}")
 
     segments = load_fixtures(args.fixtures)
-    seg_path = args.out.parent / "fixtures" / "_build_segments.json"
-    seg_path.parent.mkdir(parents=True, exist_ok=True)
-    seg_path.write_text(json.dumps(segments, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp = tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".json",
+        prefix="gematra_segments_",
+        delete=False,
+        encoding="utf-8",
+    )
+    try:
+        json.dump(segments, tmp, ensure_ascii=False, indent=2)
+        tmp.close()
+        seg_path = Path(tmp.name)
+    except Exception:
+        tmp.close()
+        Path(tmp.name).unlink(missing_ok=True)
+        raise
 
     build_id = args.build_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     args.out.mkdir(parents=True, exist_ok=True)
@@ -102,12 +115,20 @@ def main() -> int:
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         sys.stderr.write(proc.stderr or proc.stdout or "build failed\n")
+        try:
+            seg_path.unlink(missing_ok=True)
+        except Exception:
+            pass
         return proc.returncode
     try:
         manifest = json.loads(proc.stdout)
     except json.JSONDecodeError:
         sys.stderr.write(proc.stdout)
         sys.stderr.write(proc.stderr)
+        try:
+            seg_path.unlink(missing_ok=True)
+        except Exception:
+            pass
         return 1
 
     required = [
@@ -119,6 +140,10 @@ def main() -> int:
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         print("missing artifacts:", missing, file=sys.stderr)
+        try:
+            seg_path.unlink(missing_ok=True)
+        except Exception:
+            pass
         return 1
 
     stats = manifest.get("stats") or {}
@@ -130,6 +155,10 @@ def main() -> int:
         file=sys.stderr,
     )
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
+    try:
+        seg_path.unlink(missing_ok=True)
+    except Exception:
+        pass
     return 0
 
 
