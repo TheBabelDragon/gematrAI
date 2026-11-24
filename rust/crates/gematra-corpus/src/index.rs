@@ -31,7 +31,7 @@ pub fn build_index(
                 refs: Vec::new(),
                 books: BTreeSet::new(),
                 license: row.license.clone(),
-                kind: row.kind.clone(),
+                kinds: BTreeSet::new(),
             });
         entry.count += 1;
         if !row.book.is_empty() {
@@ -43,23 +43,40 @@ pub fn build_index(
         {
             entry.refs.push(row.r#ref.clone());
         }
-        if row.kind == "text" || row.kind == "fixture" {
-            entry.kind = row.kind.clone();
+        if !row.kind.is_empty() {
+            entry.kinds.insert(row.kind.clone());
+        }
+        if row.kind != "seed" && !row.surface.is_empty() {
+            entry.surface = row.surface.clone();
+        }
+        if entry.license.is_empty() && !row.license.is_empty() {
+            entry.license = row.license.clone();
         }
     }
 
-    let mut seen_seed: BTreeSet<(String, String)> = BTreeSet::new();
-    let mut seen_text: BTreeSet<(String, String)> = BTreeSet::new();
-    for row in token_rows {
-        let key = (row.system.clone(), row.normalized.clone());
-        if row.kind == "seed" {
-            seen_seed.insert(key);
-        } else {
-            seen_text.insert(key);
+    // Provenance stats from aggregated kinds (not mutually exclusive)
+    let mut seed_terms_set: BTreeSet<(String, String)> = BTreeSet::new();
+    let mut text_terms_set: BTreeSet<(String, String)> = BTreeSet::new();
+    let mut multi_kind: u32 = 0;
+    for (sys, valmap) in &by_sys {
+        for terms in valmap.values() {
+            for (norm, agg) in terms {
+                let key = (sys.clone(), norm.clone());
+                if agg.kinds.contains("seed") {
+                    seed_terms_set.insert(key.clone());
+                }
+                if agg.kinds.iter().any(|k| k == "fixture" || k == "text") {
+                    text_terms_set.insert(key);
+                }
+                if agg.kinds.len() > 1 {
+                    multi_kind += 1;
+                }
+            }
         }
     }
-    let seed_terms = seen_seed.len() as u32;
-    let text_terms = seen_text.len() as u32;
+    let seed_terms = seed_terms_set.len() as u32;
+    let text_terms = text_terms_set.len() as u32;
+    let _multi_kind_terms = multi_kind;
 
     let mut phrases_by_sys: BTreeMap<String, BTreeMap<u32, Vec<serde_json::Value>>> =
         BTreeMap::new();
@@ -103,7 +120,8 @@ pub fn build_index(
                     r: agg.refs.clone(),
                     b: agg.books.iter().cloned().collect(),
                     lic: agg.license.clone(),
-                    kind: agg.kind.clone(),
+                    kind: agg.primary_kind(),
+                    kinds: agg.kinds.iter().cloned().collect(),
                 });
             }
             items.sort_by(|a, b| a.t.cmp(&b.t));
@@ -142,7 +160,8 @@ pub fn build_index(
                     r: agg.refs.clone(),
                     b: agg.books.iter().cloned().collect(),
                     lic: agg.license.clone(),
-                    kind: agg.kind.clone(),
+                    kind: agg.primary_kind(),
+                    kinds: agg.kinds.iter().cloned().collect(),
                 })
                 .collect();
             if val < 100 {
@@ -185,7 +204,22 @@ pub(crate) struct Agg {
     pub refs: Vec<String>,
     pub books: BTreeSet<String>,
     pub license: String,
-    pub kind: String,
+    /// All contributing kinds (seed, fixture, text) — not mutually exclusive
+    pub kinds: BTreeSet<String>,
+}
+
+impl Agg {
+    pub fn primary_kind(&self) -> String {
+        if self.kinds.contains("fixture") {
+            "fixture".into()
+        } else if self.kinds.contains("text") {
+            "text".into()
+        } else if self.kinds.contains("seed") {
+            "seed".into()
+        } else {
+            self.kinds.iter().next().cloned().unwrap_or_default()
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
