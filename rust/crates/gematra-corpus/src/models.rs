@@ -84,8 +84,12 @@ pub struct IndexItem {
     pub b: Vec<String>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub lic: String,
+    /// Primary kind for display (fixture/text preferred over seed)
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub kind: String,
+    /// All source kinds that contributed occurrences (seed, fixture, text)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub kinds: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
