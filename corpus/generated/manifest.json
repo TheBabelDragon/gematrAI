@@ -15,7 +15,7 @@
     "seed"
   ],
   "stats": {
-    "indexed_term_slots": 711,
+    "indexed_term_slots": 710,
     "indexed_values": {
       "english-ordinal": 76,
       "english-pythagorean": 39,
@@ -27,22 +27,22 @@
     },
     "n_books": 3,
     "phrases": 36,
-    "seed_term_slots": 671,
-    "seed_terms": 671,
+    "seed_term_slots": 670,
+    "seed_terms": 670,
     "segments": 266,
     "source_terms": 40,
     "terms_per_system": {
       "english-ordinal": 168,
       "english-pythagorean": 168,
       "english-reduction": 168,
-      "greek-isopsephy": 51,
+      "greek-isopsephy": 50,
       "hebrew-gadol": 52,
       "hebrew-katan": 52,
       "hebrew-standard": 52
     },
     "text_term_slots": 40,
     "token_occurrences": 732,
-    "unique_terms": 711
+    "unique_terms": 710
   },
   "systems": [
     "english-ordinal",
