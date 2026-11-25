@@ -42,7 +42,10 @@ fn tokenize_hebrew_with_niqqud() {
     let text = "\u{05d1}\u{05bc}\u{05b0}\u{05e8}\u{05b5}\u{05d0}\u{05e9}\u{05c1}\u{05b4}\u{0596}\u{05d9}\u{05ea}";
     let toks = tokenize(text, "hebrew");
     assert!(!toks.is_empty());
-    assert_eq!(toks[0].1, "\u{05d1}\u{05e8}\u{05d0}\u{05e9}\u{05d9}\u{05ea}");
+    assert_eq!(
+        toks[0].1,
+        "\u{05d1}\u{05e8}\u{05d0}\u{05e9}\u{05d9}\u{05ea}"
+    );
 }
 
 #[test]
@@ -154,8 +157,7 @@ fn build_includes_acceptance_lookups() {
     let dir = std::env::temp_dir().join("gematra_corpus_test");
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
-    let manifest =
-        build_corpus(&segs, &dir, &CorpusBuildConfig::default(), "test-build").unwrap();
+    let manifest = build_corpus(&segs, &dir, &CorpusBuildConfig::default(), "test-build").unwrap();
     assert_eq!(manifest["tower"], TOWER_VERSION);
 
     let low: serde_json::Value =
@@ -186,12 +188,14 @@ fn build_includes_acceptance_lookups() {
     assert!(
         logos.as_array().unwrap().iter().any(|x| {
             let t = x["t"].as_str().unwrap_or("");
-            t == "\u{03bb}\u{03cc}\u{03b3}\u{03bf}\u{03c2}" || t == "\u{03bb}\u{03bf}\u{03b3}\u{03bf}\u{03c2}"
+            t == "\u{03bb}\u{03cc}\u{03b3}\u{03bf}\u{03c2}"
+                || t == "\u{03bb}\u{03bf}\u{03b3}\u{03bf}\u{03c2}"
         }),
         "logos entries={logos}"
     );
 
-    let vals = calculate_token_systems("\u{05d1}\u{05e8}\u{05d0}\u{05e9}\u{05d9}\u{05ea}", "hebrew");
+    let vals =
+        calculate_token_systems("\u{05d1}\u{05e8}\u{05d0}\u{05e9}\u{05d9}\u{05ea}", "hebrew");
     let std = vals.iter().find(|(s, _)| s == "hebrew-standard").unwrap().1;
     assert!(std > 0);
 }
