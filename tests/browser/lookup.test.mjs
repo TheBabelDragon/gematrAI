@@ -215,13 +215,84 @@ await checkAsync('multi-source provenance on λογος', async () => {
   const logos = r.hits.find((h) => h.t === 'λογος');
   assert.ok(logos, 'λογος present');
   const labels = provenanceLabels(logos);
-  if (logos.kinds && logos.kinds.length) {
-    assert.ok(
-      labels.includes('fixture') || labels.includes('seed'),
-      'expected seed or fixture in ' + JSON.stringify(labels)
-    );
-  }
+  assert.ok(Array.isArray(logos.kinds) && logos.kinds.length >= 2,
+    'expected kinds[] with multi-source, got ' + JSON.stringify(logos.kinds));
+  assert.ok(labels.includes('fixture'), 'expected fixture in ' + JSON.stringify(labels));
+  assert.ok(labels.includes('seed'), 'expected seed in ' + JSON.stringify(labels));
   assert.ok(logos.c >= 1);
+});
+
+await checkAsync('HTTP 404 on low pack falls through then empty/missing', async () => {
+  const map = {
+    './corpus/generated/values_low.json': { status: 404, body: null },
+    './corpus/generated/values_mid.json': { status: 200, body: mid },
+  };
+  const { lookupValue } = createLookup(makeFetch(map));
+  const r = await lookupValue('hebrew-standard', 18, {
+    ...manifest,
+    lowValuesUrl: './corpus/generated/values_low.json',
+    midValuesUrl: './corpus/generated/values_mid.json',
+  });
+  assert.ok(
+    r.outcome === LookupOutcome.EMPTY || r.outcome === LookupOutcome.MATCHES,
+    'unexpected outcome ' + r.outcome
+  );
+});
+
+await checkAsync('malformed nested system (non-object)', async () => {
+  const map = {
+    './corpus/generated/values_low.json': {
+      status: 200,
+      body: { 'hebrew-standard': null },
+    },
+  };
+  const { lookupValue } = createLookup(makeFetch(map));
+  const r = await lookupValue('hebrew-standard', 18, manifest);
+  assert.equal(r.outcome, LookupOutcome.INVALID_ARTIFACT);
+});
+
+await checkAsync('malformed term array (string instead of array)', async () => {
+  const map = {
+    './corpus/generated/values_low.json': {
+      status: 200,
+      body: { 'hebrew-standard': { '18': 'not-an-array' } },
+    },
+  };
+  const { lookupValue } = createLookup(makeFetch(map));
+  const r = await lookupValue('hebrew-standard', 18, manifest);
+  assert.equal(r.outcome, LookupOutcome.INVALID_ARTIFACT);
+});
+
+await checkAsync('invalid occurrence count (negative)', async () => {
+  const map = {
+    './corpus/generated/values_low.json': {
+      status: 200,
+      body: {
+        'hebrew-standard': {
+          '18': [{ t: 'חי', s: 'חי', c: -1 }],
+        },
+      },
+    },
+  };
+  const { lookupValue } = createLookup(makeFetch(map));
+  const r = await lookupValue('hebrew-standard', 18, manifest);
+  assert.equal(r.outcome, LookupOutcome.INVALID_ARTIFACT);
+});
+
+await checkAsync('malformed provenance kinds (not array)', async () => {
+  const map = {
+    './corpus/generated/values_low.json': {
+      status: 200,
+      body: {
+        'hebrew-standard': {
+          '18': [{ t: 'חי', s: 'חי', c: 1, kinds: 'seed' }],
+        },
+      },
+    },
+  };
+  const { lookupValue } = createLookup(makeFetch(map));
+  const r = await lookupValue('hebrew-standard', 18, manifest);
+  assert.equal(r.outcome, LookupOutcome.INVALID_ARTIFACT);
 });
 
 check('fromPack exact', () => {
