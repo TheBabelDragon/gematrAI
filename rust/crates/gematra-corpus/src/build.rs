@@ -158,7 +158,8 @@ pub fn build_corpus(
         }
     }
 
-    let mut phrases_by_sys: BTreeMap<String, BTreeMap<u32, Vec<serde_json::Value>>> = BTreeMap::new();
+    let mut phrases_by_sys: BTreeMap<String, BTreeMap<u32, Vec<serde_json::Value>>> =
+        BTreeMap::new();
     for row in &all_phrases {
         phrases_by_sys
             .entry(row.system.clone())
