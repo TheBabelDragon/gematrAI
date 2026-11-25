@@ -10,6 +10,7 @@ on:
       - "scripts/corpus/**"
       - "data/seed/**"
       - "corpus/**"
+      - "tests/browser/**"
       - ".github/workflows/rust.yml"
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - "scripts/corpus/**"
       - "data/seed/**"
       - "corpus/**"
+      - "tests/browser/**"
   workflow_dispatch:
 
 jobs:
@@ -37,6 +39,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Format check
         working-directory: rust
@@ -117,6 +124,12 @@ jobs:
       - name: Exact acceptance verification
         run: python3 scripts/corpus/verify_acceptance.py
 
+      - name: Independent artifact statistics
+        run: python3 scripts/corpus/verify_stats.py
+
+      - name: Node production lookup tests
+        run: node tests/browser/lookup.test.mjs
+
       - name: Browser lookup simulation
         run: python3 scripts/corpus/test_browser_lookup.py
 
@@ -128,6 +141,7 @@ jobs:
           test -f corpus/generated/metadata/build.json
           python3 -c "
           import json
+          from pathlib import Path
           m=json.load(open('corpus/generated/manifest.json'))
           st=m.get('stats') or {}
           assert st.get('unique_terms',0) >= 50, st
@@ -138,7 +152,18 @@ jobs:
           low=json.load(open('corpus/generated/values_low.json'))
           assert 'hebrew-standard' in low
           assert any(x.get('t')=='\u05d7\u05d9' for x in low['hebrew-standard'].get('18',[]))
-          print('artifact consistency ok', st.get('unique_terms'))
+          # Every manifest-referenced relative pack must exist
+          for key in ('lowValuesUrl', 'midValuesUrl'):
+            url = m.get(key) or ''
+            if url.startswith('./'):
+              p = Path(url[2:])
+              assert p.is_file(), f'missing {p} for {key}'
+          # Shard directory and at least the expected segment count
+          values = Path('corpus/generated/values')
+          assert values.is_dir()
+          shards = list(values.rglob('*.json'))
+          assert len(shards) >= 10, f'too few shards: {len(shards)}'
+          print('artifact consistency ok', st.get('unique_terms'), 'shards', len(shards))
           "
 
       - name: Build WASM
