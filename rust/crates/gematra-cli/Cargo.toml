@@ -21,6 +21,8 @@ gematra-core = { path = "../gematra-core" }
 gematra-ciphers = { path = "../gematra-ciphers" }
 gematra-unicode = { path = "../gematra-unicode" }
 gematra-fixtures = { path = "../gematra-fixtures" }
+gematra-corpus = { path = "../gematra-corpus" }
 
 [dev-dependencies]
 gematra-fixtures = { path = "../gematra-fixtures" }
+gematra-corpus = { path = "../gematra-corpus" }

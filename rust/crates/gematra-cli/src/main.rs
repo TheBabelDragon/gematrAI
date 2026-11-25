@@ -66,6 +66,11 @@ enum Commands {
         #[arg(long, default_value_t = DEFAULT_MAX_TEXT_BYTES)]
         max_text_bytes: usize,
     },
+    /// Build reverse-lookup corpus artifacts from segment JSON/NDJSON
+    Corpus {
+        #[command(subcommand)]
+        action: CorpusCmd,
+    },
     Systems {
         #[arg(long)]
         pretty: bool,
@@ -77,6 +82,28 @@ enum Commands {
     Version {
         #[arg(long)]
         json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum CorpusCmd {
+    /// Build corpus index from segments + optional seed lexicon
+    Build {
+        /// Input segments JSON/NDJSON file (or stdin)
+        #[arg(short, long)]
+        input: Option<PathBuf>,
+        /// Seed lexicon JSON array [{term, language, notes}]
+        #[arg(long)]
+        seed: Option<PathBuf>,
+        /// Output directory for generated artifacts
+        #[arg(short, long)]
+        out: PathBuf,
+        /// Max phrase n-gram length (default 2)
+        #[arg(long, default_value_t = 2)]
+        phrase_max: u32,
+        /// Build ID stamp (default UTC timestamp)
+        #[arg(long)]
+        build_id: Option<String>,
     },
 }
 
@@ -154,6 +181,89 @@ fn main() {
                 }
             }
         }
+        Commands::Corpus { action } => match action {
+            CorpusCmd::Build {
+                input,
+                seed,
+                out,
+                phrase_max,
+                build_id,
+            } => {
+                use gematra_corpus::{
+                    build_corpus, load_segments_from_path, load_segments_from_str,
+                    CorpusBuildConfig, SegmentInput,
+                };
+                use std::time::{SystemTime, UNIX_EPOCH};
+                let mut segments: Vec<SegmentInput> = if let Some(p) = input {
+                    load_segments_from_path(&p).unwrap_or_else(|e| {
+                        eprintln!("corpus input: {e}");
+                        process::exit(2);
+                    })
+                } else {
+                    let mut buf = String::new();
+                    io::stdin().read_to_string(&mut buf).expect("stdin");
+                    if buf.trim().is_empty() {
+                        vec![]
+                    } else {
+                        load_segments_from_str(&buf).unwrap_or_else(|e| {
+                            eprintln!("corpus input: {e}");
+                            process::exit(2);
+                        })
+                    }
+                };
+                if let Some(seed_path) = seed {
+                    let seed_text = std::fs::read_to_string(&seed_path).unwrap_or_else(|e| {
+                        eprintln!("seed: {e}");
+                        process::exit(2);
+                    });
+                    let seed_vals: Vec<serde_json::Value> = serde_json::from_str(&seed_text)
+                        .unwrap_or_else(|e| {
+                            eprintln!("seed JSON: {e}");
+                            process::exit(2);
+                        });
+                    for v in seed_vals {
+                        let term = v["term"].as_str().unwrap_or("").to_string();
+                        if term.is_empty() {
+                            continue;
+                        }
+                        segments.push(SegmentInput {
+                            id: None,
+                            r#ref: None,
+                            reference: None,
+                            book: Some("seed".into()),
+                            language: v["language"].as_str().map(|s| s.to_string()),
+                            text: term,
+                            license: Some("seed-lexicon".into()),
+                            source_url: None,
+                            kind: Some("seed".into()),
+                            notes: v["notes"].as_str().map(|s| s.to_string()),
+                        });
+                    }
+                }
+                let build_id = build_id.unwrap_or_else(|| {
+                    let secs = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .map(|d| d.as_secs())
+                        .unwrap_or(0);
+                    format!("build-{secs}")
+                });
+                let cfg = CorpusBuildConfig {
+                    phrase_max_n: phrase_max,
+                    ..CorpusBuildConfig::default()
+                };
+                let n = segments.len() as u32;
+                match build_corpus(&segments, &out, &cfg, &build_id) {
+                    Ok(manifest) => {
+                        println!("{}", serde_json::to_string_pretty(&manifest).unwrap());
+                        eprintln!("corpus build ok: segments={n} out={}", out.display());
+                    }
+                    Err(e) => {
+                        eprintln!("corpus build failed: {e}");
+                        process::exit(1);
+                    }
+                }
+            }
+        },
         Commands::Systems { pretty } => {
             print_json(&all_system_meta(), pretty);
         }

@@ -1,12 +1,29 @@
 {
-  "tower": "0.2",
+  "build": "local-repair-1795563258",
+  "cipher_registry_version": "1",
+  "corpus_schema_version": "1",
+  "disclaimer": "Gematria values are computed by the Rust gematrAI engine from selected text segments and seed lexicon. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
+  "engine_version": "0.1.0",
   "name": "gematrAI Corpus Tower",
-  "source": "fixtures+local",
   "scope": [
-    "fixtures"
+    "fixtures",
+    "seed"
   ],
-  "build": "20261122T134433Z",
-  "builtAt": "2026-11-22T13:44:33.847575+00:00",
+  "source": "fixtures+seed",
+  "stats": {
+    "books": [
+      "Fixture",
+      "Genesis",
+      "seed"
+    ],
+    "multi_kind_terms": 10,
+    "n_books": 3,
+    "seed_term_slots": 37,
+    "segments": 18,
+    "text_term_slots": 40,
+    "token_occurrences": 86,
+    "unique_tokens": 67
+  },
   "systems": [
     "english-ordinal",
     "english-pythagorean",
@@ -16,19 +33,6 @@
     "hebrew-katan",
     "hebrew-standard"
   ],
-  "stats": {
-    "segments": 5,
-    "unique_tokens": 14,
-    "token_occurrences": 49,
-    "n_books": 2,
-    "books": [
-      "Fixture",
-      "Genesis"
-    ]
-  },
-  "disclaimer": "Gematria values are computed by gematrAI from selected text segments. Numerical equivalence does not establish semantic, theological, historical, or causal relationships.",
-  "sefaria": {
-    "docs": "https://developers.sefaria.org/reference/get-v3-texts",
-    "export": "https://github.com/Sefaria/Sefaria-Export"
-  }
+  "tower": "0.3",
+  "unicode_policy_version": "1"
 }
