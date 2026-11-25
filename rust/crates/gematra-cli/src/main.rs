@@ -190,8 +190,8 @@ fn main() {
                 build_id,
             } => {
                 use gematra_corpus::{
-                    build_corpus, load_segments_from_path, load_segments_from_str, CorpusBuildConfig,
-                    SegmentInput,
+                    build_corpus, load_segments_from_path, load_segments_from_str,
+                    CorpusBuildConfig, SegmentInput,
                 };
                 use std::time::{SystemTime, UNIX_EPOCH};
                 let mut segments: Vec<SegmentInput> = if let Some(p) = input {
@@ -216,8 +216,8 @@ fn main() {
                         eprintln!("seed: {e}");
                         process::exit(2);
                     });
-                    let seed_vals: Vec<serde_json::Value> =
-                        serde_json::from_str(&seed_text).unwrap_or_else(|e| {
+                    let seed_vals: Vec<serde_json::Value> = serde_json::from_str(&seed_text)
+                        .unwrap_or_else(|e| {
                             eprintln!("seed JSON: {e}");
                             process::exit(2);
                         });
@@ -255,10 +255,7 @@ fn main() {
                 match build_corpus(&segments, &out, &cfg, &build_id) {
                     Ok(manifest) => {
                         println!("{}", serde_json::to_string_pretty(&manifest).unwrap());
-                        eprintln!(
-                            "corpus build ok: segments={n} out={}",
-                            out.display()
-                        );
+                        eprintln!("corpus build ok: segments={n} out={}", out.display());
                     }
                     Err(e) => {
                         eprintln!("corpus build failed: {e}");
