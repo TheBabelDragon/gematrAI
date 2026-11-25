@@ -1,8 +1,8 @@
 //! Rust-authoritative per-token calculation and segment processing.
 use gematra_ciphers::SystemId;
-use std::collections::HashMap;
 use gematra_core::{calculate, calculate_applicable};
 use gematra_unicode::NormalizationForm;
+use std::collections::HashMap;
 
 use crate::models::{CorpusBuildConfig, PhraseRecord, SegmentInput, TokenRecord};
 use crate::tokenize::{canonical_form, classify_language, tokenize};
@@ -52,7 +52,12 @@ pub fn process_segment(
         return (vec![], vec![]);
     }
     let language = if lang == "unknown" {
-        match seg.language.as_deref().map(|s| s.to_ascii_lowercase()).as_deref() {
+        match seg
+            .language
+            .as_deref()
+            .map(|s| s.to_ascii_lowercase())
+            .as_deref()
+        {
             Some("he") | Some("hebrew") => "hebrew".to_string(),
             Some("el") | Some("greek") => "greek".to_string(),
             Some("en") | Some("english") => "english".to_string(),
@@ -119,9 +124,8 @@ pub fn process_segment(
             let pn = format!("{n0} {n1}");
             let ps = format!("{s0} {s1}");
             let vals0 = calculate_token_systems(n0, &language);
-            let vals1: HashMap<String, u32> = calculate_token_systems(n1, &language)
-                .into_iter()
-                .collect();
+            let vals1: HashMap<String, u32> =
+                calculate_token_systems(n1, &language).into_iter().collect();
             for (sys, v0) in vals0 {
                 if let Some(&v1) = vals1.get(&sys) {
                     phrases.push(PhraseRecord {
